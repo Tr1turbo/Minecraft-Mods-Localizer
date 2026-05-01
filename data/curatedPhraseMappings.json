@@ -1,0 +1,3407 @@
+[
+  {
+    "id": "curated.biome.badlands",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "badlands",
+      "badland"
+    ],
+    "zh_cn": [
+      "恶地"
+    ],
+    "zh_tw": [
+      "惡地"
+    ],
+    "zh_hk": [
+      "惡地"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.badlands."
+  },
+  {
+    "id": "curated.biome.beach",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "beach",
+      "beaches"
+    ],
+    "zh_cn": [
+      "沙滩"
+    ],
+    "zh_tw": [
+      "沙灘"
+    ],
+    "zh_hk": [
+      "沙灘"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.beach."
+  },
+  {
+    "id": "curated.biome.caves",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "caves",
+      "cave"
+    ],
+    "zh_cn": [
+      "洞"
+    ],
+    "zh_tw": [
+      "洞窟"
+    ],
+    "zh_hk": [
+      "洞"
+    ],
+    "note": "Extracted from vanilla cave biome names."
+  },
+  {
+    "id": "curated.biome.deep",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "deep"
+    ],
+    "zh_cn": [
+      "深"
+    ],
+    "zh_tw": [
+      "深"
+    ],
+    "zh_hk": [
+      "深"
+    ],
+    "note": "Extracted from vanilla deep ocean biome names."
+  },
+  {
+    "id": "curated.biome.forest",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "forest",
+      "forests"
+    ],
+    "zh_cn": [
+      "森林"
+    ],
+    "zh_tw": [
+      "森林"
+    ],
+    "zh_hk": [
+      "森林"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.forest."
+  },
+  {
+    "id": "curated.biome.frozen",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "frozen"
+    ],
+    "zh_cn": [
+      "冰冻"
+    ],
+    "zh_tw": [
+      "寒凍"
+    ],
+    "zh_hk": [
+      "寒凍"
+    ],
+    "note": "Extracted from vanilla frozen biome names."
+  },
+  {
+    "id": "curated.biome.jungle",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "jungle"
+    ],
+    "zh_cn": [
+      "丛林"
+    ],
+    "zh_tw": [
+      "叢林"
+    ],
+    "zh_hk": [
+      "叢林"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.jungle."
+  },
+  {
+    "id": "curated.biome.ocean",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "ocean",
+      "oceans"
+    ],
+    "zh_cn": [
+      "海洋"
+    ],
+    "zh_tw": [
+      "海洋"
+    ],
+    "zh_hk": [
+      "海洋"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.ocean."
+  },
+  {
+    "id": "curated.biome.old_growth",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "old growth"
+    ],
+    "zh_cn": [
+      "原始"
+    ],
+    "zh_tw": [
+      "原生"
+    ],
+    "zh_hk": [
+      "原始"
+    ],
+    "note": "Extracted from vanilla old growth biome names."
+  },
+  {
+    "id": "curated.biome.peaks",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "peaks",
+      "peak"
+    ],
+    "zh_cn": [
+      "山峰"
+    ],
+    "zh_tw": [
+      "山峰"
+    ],
+    "zh_hk": [
+      "山峰"
+    ],
+    "note": "Extracted from vanilla peak biome names."
+  },
+  {
+    "id": "curated.biome.plains",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "plains",
+      "plain"
+    ],
+    "zh_cn": [
+      "平原"
+    ],
+    "zh_tw": [
+      "平原"
+    ],
+    "zh_hk": [
+      "平原"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.plains."
+  },
+  {
+    "id": "curated.biome.river",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "river",
+      "rivers"
+    ],
+    "zh_cn": [
+      "河流"
+    ],
+    "zh_tw": [
+      "河流"
+    ],
+    "zh_hk": [
+      "河流"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.river."
+  },
+  {
+    "id": "curated.biome.savanna",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "savanna"
+    ],
+    "zh_cn": [
+      "热带草原"
+    ],
+    "zh_tw": [
+      "莽原"
+    ],
+    "zh_hk": [
+      "熱帶稀樹草原"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.savanna."
+  },
+  {
+    "id": "curated.biome.snowy",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "snowy"
+    ],
+    "zh_cn": [
+      "积雪"
+    ],
+    "zh_tw": [
+      "雪原"
+    ],
+    "zh_hk": [
+      "雪原"
+    ],
+    "note": "Extracted from vanilla snowy biome names."
+  },
+  {
+    "id": "curated.biome.swamp",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "swamp",
+      "swamps"
+    ],
+    "zh_cn": [
+      "沼泽"
+    ],
+    "zh_tw": [
+      "沼澤"
+    ],
+    "zh_hk": [
+      "沼澤地"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.swamp."
+  },
+  {
+    "id": "curated.biome.taiga",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "taiga",
+      "taigas"
+    ],
+    "zh_cn": [
+      "针叶林"
+    ],
+    "zh_tw": [
+      "針葉林"
+    ],
+    "zh_hk": [
+      "針葉林"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.taiga."
+  },
+  {
+    "id": "curated.biome.the_end",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "the end",
+      "end"
+    ],
+    "zh_cn": [
+      "末地"
+    ],
+    "zh_tw": [
+      "終界"
+    ],
+    "zh_hk": [
+      "終界"
+    ],
+    "note": "Extracted reusable phrase from vanilla biome.minecraft.the_end."
+  },
+  {
+    "id": "curated.biome.windswept",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "windswept"
+    ],
+    "zh_cn": [
+      "风袭"
+    ],
+    "zh_tw": [
+      "風蝕"
+    ],
+    "zh_hk": [
+      "風襲"
+    ],
+    "note": "Extracted from vanilla windswept biome names."
+  },
+  {
+    "id": "curated.block.banner",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "banner",
+      "banners"
+    ],
+    "zh_cn": [
+      "旗帜"
+    ],
+    "zh_tw": [
+      "旗幟"
+    ],
+    "zh_hk": [
+      "橫額"
+    ],
+    "note": "Extracted from 17 vanilla block names ending in \"banner\"."
+  },
+  {
+    "id": "curated.block.bars",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "bars",
+      "bar"
+    ],
+    "zh_cn": [
+      "栏杆"
+    ],
+    "zh_tw": [
+      "柵欄"
+    ],
+    "zh_hk": [
+      "欄杆"
+    ],
+    "note": "Extracted from 9 vanilla block names ending in \"bars\"."
+  },
+  {
+    "id": "curated.block.bed",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "bed",
+      "beds"
+    ],
+    "zh_cn": [
+      "床"
+    ],
+    "zh_tw": [
+      "床"
+    ],
+    "zh_hk": [
+      "牀"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"bed\"."
+  },
+  {
+    "id": "curated.block.black",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "black"
+    ],
+    "zh_cn": [
+      "黑色"
+    ],
+    "zh_tw": [
+      "黑色"
+    ],
+    "zh_hk": [
+      "黑色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.black_wool."
+  },
+  {
+    "id": "curated.block.blue",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "blue"
+    ],
+    "zh_cn": [
+      "蓝色"
+    ],
+    "zh_tw": [
+      "藍色"
+    ],
+    "zh_hk": [
+      "藍色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.blue_wool."
+  },
+  {
+    "id": "curated.block.brick_slab",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "brick slab"
+    ],
+    "zh_cn": [
+      "砖台阶"
+    ],
+    "zh_tw": [
+      "磚半磚"
+    ],
+    "zh_hk": [
+      "磚半磚"
+    ],
+    "note": "Extracted from 14 vanilla block names ending in \"brick slab\"."
+  },
+  {
+    "id": "curated.block.brick_stairs",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "brick stairs"
+    ],
+    "zh_cn": [
+      "砖楼梯"
+    ],
+    "zh_tw": [
+      "磚階梯"
+    ],
+    "zh_hk": [
+      "磚樓梯"
+    ],
+    "note": "Extracted from 14 vanilla block names ending in \"brick stairs\"."
+  },
+  {
+    "id": "curated.block.brick_wall",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "brick wall"
+    ],
+    "zh_cn": [
+      "砖墙"
+    ],
+    "zh_tw": [
+      "磚牆"
+    ],
+    "zh_hk": [
+      "磚牆"
+    ],
+    "note": "Extracted from 13 vanilla block names ending in \"brick wall\"."
+  },
+  {
+    "id": "curated.block.brown",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "brown"
+    ],
+    "zh_cn": [
+      "棕色"
+    ],
+    "zh_tw": [
+      "棕色"
+    ],
+    "zh_hk": [
+      "啡色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.brown_wool."
+  },
+  {
+    "id": "curated.block.button",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "button",
+      "buttons"
+    ],
+    "zh_cn": [
+      "按钮"
+    ],
+    "zh_tw": [
+      "按鈕"
+    ],
+    "zh_hk": [
+      "按鈕"
+    ],
+    "note": "Extracted from 14 vanilla block names ending in \"button\"."
+  },
+  {
+    "id": "curated.block.chain",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "chain",
+      "chains"
+    ],
+    "zh_cn": [
+      "锁链"
+    ],
+    "zh_tw": [
+      "鎖鏈"
+    ],
+    "zh_hk": [
+      "鐵鏈"
+    ],
+    "note": "Extracted from vanilla block.minecraft.chain."
+  },
+  {
+    "id": "curated.block.chiseled",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "chiseled"
+    ],
+    "zh_cn": [
+      "雕纹"
+    ],
+    "zh_tw": [
+      "浮雕"
+    ],
+    "zh_hk": [
+      "浮雕"
+    ],
+    "note": "Extracted from 14 vanilla block names starting with \"chiseled\"."
+  },
+  {
+    "id": "curated.block.concrete",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "concrete"
+    ],
+    "zh_cn": [
+      "混凝土"
+    ],
+    "zh_tw": [
+      "混凝土"
+    ],
+    "zh_hk": [
+      "混凝土"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"concrete\"."
+  },
+  {
+    "id": "curated.block.concrete_powder",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "concrete powder"
+    ],
+    "zh_cn": [
+      "混凝土粉末"
+    ],
+    "zh_tw": [
+      "混凝土粉末"
+    ],
+    "zh_hk": [
+      "混凝土粉末"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"concrete powder\"."
+  },
+  {
+    "id": "curated.block.copper_bars",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper bars"
+    ],
+    "zh_cn": [
+      "铜栏杆"
+    ],
+    "zh_tw": [
+      "銅柵欄"
+    ],
+    "zh_hk": [
+      "銅欄杆"
+    ],
+    "note": "Extracted from 8 vanilla block names ending in \"copper bars\"."
+  },
+  {
+    "id": "curated.block.copper_bulb",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper bulb"
+    ],
+    "zh_cn": [
+      "铜灯"
+    ],
+    "zh_tw": [
+      "銅燈"
+    ],
+    "zh_hk": [
+      "銅燈"
+    ],
+    "note": "Extracted from 8 vanilla block names ending in \"copper bulb\"."
+  },
+  {
+    "id": "curated.block.copper_door",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper door"
+    ],
+    "zh_cn": [
+      "铜门"
+    ],
+    "zh_tw": [
+      "銅門"
+    ],
+    "zh_hk": [
+      "銅門"
+    ],
+    "note": "Extracted from 8 vanilla block names ending in \"copper door\"."
+  },
+  {
+    "id": "curated.block.copper_grate",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper grate"
+    ],
+    "zh_cn": [
+      "铜格栅"
+    ],
+    "zh_tw": [
+      "銅格柵"
+    ],
+    "zh_hk": [
+      "銅網格"
+    ],
+    "note": "Extracted from 8 vanilla block names ending in \"copper grate\"."
+  },
+  {
+    "id": "curated.block.copper_trapdoor",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper trapdoor"
+    ],
+    "zh_cn": [
+      "铜活板门"
+    ],
+    "zh_tw": [
+      "銅地板門"
+    ],
+    "zh_hk": [
+      "銅地板門"
+    ],
+    "note": "Extracted from 8 vanilla block names ending in \"copper trapdoor\"."
+  },
+  {
+    "id": "curated.block.cut",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "cut"
+    ],
+    "zh_cn": [
+      "切制"
+    ],
+    "zh_tw": [
+      "切製"
+    ],
+    "zh_hk": [
+      "切製"
+    ],
+    "note": "Extracted from 7 vanilla block names starting with \"cut\"."
+  },
+  {
+    "id": "curated.block.cut_copper",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "cut copper"
+    ],
+    "zh_cn": [
+      "切制铜块"
+    ],
+    "zh_tw": [
+      "切製銅方塊"
+    ],
+    "zh_hk": [
+      "切製銅磚"
+    ],
+    "note": "Extracted from vanilla block.minecraft.cut_copper."
+  },
+  {
+    "id": "curated.block.cyan",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "cyan"
+    ],
+    "zh_cn": [
+      "青色"
+    ],
+    "zh_tw": [
+      "青色"
+    ],
+    "zh_hk": [
+      "青藍色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.cyan_wool."
+  },
+  {
+    "id": "curated.block.door",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "door",
+      "doors"
+    ],
+    "zh_cn": [
+      "门"
+    ],
+    "zh_tw": [
+      "門"
+    ],
+    "zh_hk": [
+      "門"
+    ],
+    "note": "Extracted from 21 vanilla block names ending in \"door\"."
+  },
+  {
+    "id": "curated.block.end",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "end"
+    ],
+    "zh_cn": [
+      "末地"
+    ],
+    "zh_tw": [
+      "終界"
+    ],
+    "zh_hk": [
+      "終界"
+    ],
+    "note": "Extracted from 9 vanilla block names starting with \"end\"."
+  },
+  {
+    "id": "curated.block.exposed",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "exposed"
+    ],
+    "zh_cn": [
+      "斑驳的"
+    ],
+    "zh_tw": [
+      "斑駁的"
+    ],
+    "zh_hk": [
+      "斑駁的"
+    ],
+    "note": "Extracted from 15 vanilla block names starting with \"exposed\"."
+  },
+  {
+    "id": "curated.block.exposed_copper",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "exposed copper"
+    ],
+    "zh_cn": [
+      "斑驳的铜块"
+    ],
+    "zh_tw": [
+      "斑駁的銅方塊"
+    ],
+    "zh_hk": [
+      "斑駁的銅磚"
+    ],
+    "note": "Extracted from vanilla block.minecraft.exposed_copper."
+  },
+  {
+    "id": "curated.block.fence",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "fence",
+      "fences"
+    ],
+    "zh_cn": [
+      "栅栏"
+    ],
+    "zh_tw": [
+      "柵欄"
+    ],
+    "zh_hk": [
+      "欄杆"
+    ],
+    "note": "Extracted from 13 vanilla block names ending in \"fence\"."
+  },
+  {
+    "id": "curated.block.fence_gate",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "fence gate",
+      "fence gates"
+    ],
+    "zh_cn": [
+      "栅栏门"
+    ],
+    "zh_tw": [
+      "柵欄門"
+    ],
+    "zh_hk": [
+      "閘門"
+    ],
+    "note": "Extracted from 12 vanilla block names ending in \"fence gate\"."
+  },
+  {
+    "id": "curated.block.glass",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "glass"
+    ],
+    "zh_cn": [
+      "玻璃"
+    ],
+    "zh_tw": [
+      "玻璃"
+    ],
+    "zh_hk": [
+      "玻璃"
+    ],
+    "note": "Extracted from 18 vanilla block names ending in \"glass\"."
+  },
+  {
+    "id": "curated.block.glass_pane",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "glass pane"
+    ],
+    "zh_cn": [
+      "玻璃板"
+    ],
+    "zh_tw": [
+      "玻璃片"
+    ],
+    "zh_hk": [
+      "玻璃片"
+    ],
+    "note": "Extracted from 17 vanilla block names ending in \"glass pane\"."
+  },
+  {
+    "id": "curated.block.glazed_terracotta",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "glazed terracotta"
+    ],
+    "zh_cn": [
+      "带釉陶瓦"
+    ],
+    "zh_tw": [
+      "釉陶"
+    ],
+    "zh_hk": [
+      "釉陶"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"glazed terracotta\"."
+  },
+  {
+    "id": "curated.block.gray",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "gray"
+    ],
+    "zh_cn": [
+      "灰色"
+    ],
+    "zh_tw": [
+      "灰色"
+    ],
+    "zh_hk": [
+      "灰色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.gray_wool."
+  },
+  {
+    "id": "curated.block.green",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "green"
+    ],
+    "zh_cn": [
+      "绿色"
+    ],
+    "zh_tw": [
+      "綠色"
+    ],
+    "zh_hk": [
+      "綠色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.green_wool."
+  },
+  {
+    "id": "curated.block.hanging_sign",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "hanging sign",
+      "hanging signs"
+    ],
+    "zh_cn": [
+      "告示牌"
+    ],
+    "zh_tw": [
+      "告示牌"
+    ],
+    "zh_hk": [
+      "吊牌"
+    ],
+    "note": "Extracted from 24 vanilla block names ending in \"hanging sign\"."
+  },
+  {
+    "id": "curated.block.lantern",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "lantern",
+      "lanterns"
+    ],
+    "zh_cn": [
+      "灯笼"
+    ],
+    "zh_tw": [
+      "燈籠"
+    ],
+    "zh_hk": [
+      "燈籠"
+    ],
+    "note": "Extracted from vanilla block.minecraft.lantern."
+  },
+  {
+    "id": "curated.block.leaves",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "leaves",
+      "leaf"
+    ],
+    "zh_cn": [
+      "树叶"
+    ],
+    "zh_tw": [
+      "樹葉"
+    ],
+    "zh_hk": [
+      "樹葉"
+    ],
+    "note": "Extracted from 11 vanilla block names ending in \"leaves\"."
+  },
+  {
+    "id": "curated.block.light_blue",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "light blue"
+    ],
+    "zh_cn": [
+      "淡蓝色"
+    ],
+    "zh_tw": [
+      "淺藍色"
+    ],
+    "zh_hk": [
+      "淺藍色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.light_blue_wool."
+  },
+  {
+    "id": "curated.block.light_gray",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "light gray"
+    ],
+    "zh_cn": [
+      "淡灰色"
+    ],
+    "zh_tw": [
+      "淺灰色"
+    ],
+    "zh_hk": [
+      "淺灰色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.light_gray_wool."
+  },
+  {
+    "id": "curated.block.lime",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "lime"
+    ],
+    "zh_cn": [
+      "黄绿色"
+    ],
+    "zh_tw": [
+      "淺綠色"
+    ],
+    "zh_hk": [
+      "淺綠色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.lime_wool."
+  },
+  {
+    "id": "curated.block.log",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "log",
+      "logs"
+    ],
+    "zh_cn": [
+      "原木"
+    ],
+    "zh_tw": [
+      "原木"
+    ],
+    "zh_hk": [
+      "原木"
+    ],
+    "note": "Extracted from 18 vanilla block names ending in \"log\"."
+  },
+  {
+    "id": "curated.block.magenta",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "magenta"
+    ],
+    "zh_cn": [
+      "品红色"
+    ],
+    "zh_tw": [
+      "洋紅色"
+    ],
+    "zh_hk": [
+      "紫紅色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.magenta_wool."
+  },
+  {
+    "id": "curated.block.nether",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "nether"
+    ],
+    "zh_cn": [
+      "下界"
+    ],
+    "zh_tw": [
+      "地獄"
+    ],
+    "zh_hk": [
+      "地獄"
+    ],
+    "note": "Extracted from 11 vanilla block names starting with \"nether\"."
+  },
+  {
+    "id": "curated.block.orange",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "orange"
+    ],
+    "zh_cn": [
+      "橙色"
+    ],
+    "zh_tw": [
+      "橙色"
+    ],
+    "zh_hk": [
+      "橙色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.orange_wool."
+  },
+  {
+    "id": "curated.block.oxidized",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "oxidized"
+    ],
+    "zh_cn": [
+      "氧化的"
+    ],
+    "zh_tw": [
+      "氧化的"
+    ],
+    "zh_hk": [
+      "氧化的"
+    ],
+    "note": "Extracted from 15 vanilla block names starting with \"oxidized\"."
+  },
+  {
+    "id": "curated.block.oxidized_copper",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "oxidized copper"
+    ],
+    "zh_cn": [
+      "氧化的铜块"
+    ],
+    "zh_tw": [
+      "氧化的銅方塊"
+    ],
+    "zh_hk": [
+      "氧化的銅磚"
+    ],
+    "note": "Extracted from vanilla block.minecraft.oxidized_copper."
+  },
+  {
+    "id": "curated.block.pink",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "pink"
+    ],
+    "zh_cn": [
+      "粉红色"
+    ],
+    "zh_tw": [
+      "粉紅色"
+    ],
+    "zh_hk": [
+      "粉紅色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.pink_wool."
+  },
+  {
+    "id": "curated.block.planks",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "planks",
+      "plank"
+    ],
+    "zh_cn": [
+      "木板"
+    ],
+    "zh_tw": [
+      "木材"
+    ],
+    "zh_hk": [
+      "木板"
+    ],
+    "note": "Extracted from vanilla block.minecraft.oak_planks."
+  },
+  {
+    "id": "curated.block.polished",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "polished"
+    ],
+    "zh_cn": [
+      "磨制"
+    ],
+    "zh_tw": [
+      "拋光"
+    ],
+    "zh_hk": [
+      "拋光"
+    ],
+    "note": "Extracted from 36 vanilla block names starting with \"polished\"."
+  },
+  {
+    "id": "curated.block.pressure_plate",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "pressure plate",
+      "pressure plates"
+    ],
+    "zh_cn": [
+      "压力板"
+    ],
+    "zh_tw": [
+      "壓力板"
+    ],
+    "zh_hk": [
+      "壓力板"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"pressure plate\"."
+  },
+  {
+    "id": "curated.block.purple",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "purple"
+    ],
+    "zh_cn": [
+      "紫色"
+    ],
+    "zh_tw": [
+      "紫色"
+    ],
+    "zh_hk": [
+      "紫色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.purple_wool."
+  },
+  {
+    "id": "curated.block.red",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "red"
+    ],
+    "zh_cn": [
+      "红色"
+    ],
+    "zh_tw": [
+      "紅色"
+    ],
+    "zh_hk": [
+      "紅色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.red_wool."
+  },
+  {
+    "id": "curated.block.shelf",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "shelf",
+      "shelves"
+    ],
+    "zh_cn": [
+      "展示架"
+    ],
+    "zh_tw": [
+      "展示架"
+    ],
+    "zh_hk": [
+      "置物架"
+    ],
+    "note": "Extracted from 12 vanilla block names ending in \"shelf\"."
+  },
+  {
+    "id": "curated.block.shulker_box",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "shulker box"
+    ],
+    "zh_cn": [
+      "潜影盒"
+    ],
+    "zh_tw": [
+      "界伏盒"
+    ],
+    "zh_hk": [
+      "界伏盒"
+    ],
+    "note": "Extracted from 17 vanilla block names ending in \"shulker box\"."
+  },
+  {
+    "id": "curated.block.sign",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "sign",
+      "signs"
+    ],
+    "zh_cn": [
+      "告示牌"
+    ],
+    "zh_tw": [
+      "告示牌"
+    ],
+    "zh_hk": [
+      "指示牌"
+    ],
+    "note": "Extracted from 12 vanilla block names ending in \"sign\"."
+  },
+  {
+    "id": "curated.block.slab",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "slab",
+      "slabs"
+    ],
+    "zh_cn": [
+      "台阶"
+    ],
+    "zh_tw": [
+      "半磚"
+    ],
+    "zh_hk": [
+      "半磚"
+    ],
+    "note": "Extracted from 68 vanilla block names ending in \"slab\"."
+  },
+  {
+    "id": "curated.block.smooth",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "smooth"
+    ],
+    "zh_cn": [
+      "平滑"
+    ],
+    "zh_tw": [
+      "平滑"
+    ],
+    "zh_hk": [
+      "平滑"
+    ],
+    "note": "Extracted from 12 vanilla block names starting with \"smooth\"."
+  },
+  {
+    "id": "curated.block.soul_lantern",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "soul lantern"
+    ],
+    "zh_cn": [
+      "灵魂灯笼"
+    ],
+    "zh_tw": [
+      "靈魂燈籠"
+    ],
+    "zh_hk": [
+      "靈魂燈籠"
+    ],
+    "note": "Extracted from vanilla block.minecraft.soul_lantern."
+  },
+  {
+    "id": "curated.block.soul_torch",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "soul torch"
+    ],
+    "zh_cn": [
+      "灵魂火把"
+    ],
+    "zh_tw": [
+      "靈魂火把"
+    ],
+    "zh_hk": [
+      "靈魂火炬"
+    ],
+    "note": "Extracted from vanilla block.minecraft.soul_torch."
+  },
+  {
+    "id": "curated.block.stained_glass",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stained glass"
+    ],
+    "zh_cn": [
+      "染色玻璃"
+    ],
+    "zh_tw": [
+      "玻璃"
+    ],
+    "zh_hk": [
+      "染色玻璃"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"stained glass\"."
+  },
+  {
+    "id": "curated.block.stained_glass_pane",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stained glass pane"
+    ],
+    "zh_cn": [
+      "染色玻璃板"
+    ],
+    "zh_tw": [
+      "玻璃片"
+    ],
+    "zh_hk": [
+      "染色玻璃片"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"stained glass pane\"."
+  },
+  {
+    "id": "curated.block.stairs",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stairs",
+      "stair"
+    ],
+    "zh_cn": [
+      "楼梯"
+    ],
+    "zh_tw": [
+      "階梯"
+    ],
+    "zh_hk": [
+      "樓梯"
+    ],
+    "note": "Extracted from 64 vanilla block names ending in \"stairs\"."
+  },
+  {
+    "id": "curated.block.stone_bricks",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stone bricks"
+    ],
+    "zh_cn": [
+      "石砖"
+    ],
+    "zh_tw": [
+      "石磚"
+    ],
+    "zh_hk": [
+      "石磚"
+    ],
+    "note": "Extracted from 9 vanilla block names ending in \"stone bricks\"."
+  },
+  {
+    "id": "curated.block.stripped",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stripped"
+    ],
+    "zh_cn": [
+      "去皮"
+    ],
+    "zh_tw": [
+      "剝皮"
+    ],
+    "zh_hk": [
+      "剝皮"
+    ],
+    "note": "Extracted from 22 vanilla block names starting with \"stripped\"."
+  },
+  {
+    "id": "curated.block.torch",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "torch",
+      "torches"
+    ],
+    "zh_cn": [
+      "火把"
+    ],
+    "zh_tw": [
+      "火把"
+    ],
+    "zh_hk": [
+      "火炬"
+    ],
+    "note": "Extracted from vanilla block.minecraft.torch."
+  },
+  {
+    "id": "curated.block.trapdoor",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "trapdoor",
+      "trapdoors"
+    ],
+    "zh_cn": [
+      "活板门"
+    ],
+    "zh_tw": [
+      "地板門"
+    ],
+    "zh_hk": [
+      "地板門"
+    ],
+    "note": "Extracted from 21 vanilla block names ending in \"trapdoor\"."
+  },
+  {
+    "id": "curated.block.wall",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wall",
+      "walls"
+    ],
+    "zh_cn": [
+      "墙"
+    ],
+    "zh_tw": [
+      "牆"
+    ],
+    "zh_hk": [
+      "牆"
+    ],
+    "note": "Extracted from 32 vanilla block names ending in \"wall\"."
+  },
+  {
+    "id": "curated.block.wall_hanging_sign",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wall hanging sign",
+      "wall hanging signs"
+    ],
+    "zh_cn": [
+      "告示牌"
+    ],
+    "zh_tw": [
+      "告示牌"
+    ],
+    "zh_hk": [
+      "吊牌"
+    ],
+    "note": "Extracted from 12 vanilla block names ending in \"wall hanging sign\"."
+  },
+  {
+    "id": "curated.block.wall_sign",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wall sign",
+      "wall signs"
+    ],
+    "zh_cn": [
+      "告示牌"
+    ],
+    "zh_tw": [
+      "告示牌"
+    ],
+    "zh_hk": [
+      "指示牌"
+    ],
+    "note": "Extracted from 12 vanilla block names ending in \"wall sign\"."
+  },
+  {
+    "id": "curated.block.waxed",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "waxed"
+    ],
+    "zh_cn": [
+      "涂蜡的"
+    ],
+    "zh_tw": [
+      "上蠟的"
+    ],
+    "zh_hk": [
+      "打蠟的"
+    ],
+    "note": "Extracted from 60 vanilla block names starting with \"waxed\"."
+  },
+  {
+    "id": "curated.block.weathered",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "weathered"
+    ],
+    "zh_cn": [
+      "锈蚀的"
+    ],
+    "zh_tw": [
+      "風化的"
+    ],
+    "zh_hk": [
+      "生鏽的"
+    ],
+    "note": "Extracted from 15 vanilla block names starting with \"weathered\"."
+  },
+  {
+    "id": "curated.block.weathered_copper",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "weathered copper"
+    ],
+    "zh_cn": [
+      "锈蚀的铜块"
+    ],
+    "zh_tw": [
+      "風化的銅方塊"
+    ],
+    "zh_hk": [
+      "生鏽的銅磚"
+    ],
+    "note": "Extracted from vanilla block.minecraft.weathered_copper."
+  },
+  {
+    "id": "curated.block.white",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "white"
+    ],
+    "zh_cn": [
+      "白色"
+    ],
+    "zh_tw": [
+      "白色"
+    ],
+    "zh_hk": [
+      "白色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.white_wool."
+  },
+  {
+    "id": "curated.block.wool",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wool"
+    ],
+    "zh_cn": [
+      "羊毛"
+    ],
+    "zh_tw": [
+      "羊毛"
+    ],
+    "zh_hk": [
+      "羊毛"
+    ],
+    "note": "Extracted from 16 vanilla block names ending in \"wool\"."
+  },
+  {
+    "id": "curated.block.yellow",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "yellow"
+    ],
+    "zh_cn": [
+      "黄色"
+    ],
+    "zh_tw": [
+      "黃色"
+    ],
+    "zh_hk": [
+      "黃色"
+    ],
+    "note": "Extracted from vanilla block.minecraft.yellow_wool."
+  },
+  {
+    "id": "curated.effect.boost",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "boost",
+      "boosts"
+    ],
+    "zh_cn": [
+      "提升"
+    ],
+    "zh_tw": [
+      "提升"
+    ],
+    "zh_hk": [
+      "提升"
+    ],
+    "note": "Extracted from vanilla boost effect names."
+  },
+  {
+    "id": "curated.effect.instant",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "instant"
+    ],
+    "zh_cn": [
+      "瞬间"
+    ],
+    "zh_tw": [
+      "立即"
+    ],
+    "zh_hk": [
+      "立即"
+    ],
+    "note": "Extracted from vanilla instant effect names."
+  },
+  {
+    "id": "curated.effect.omen",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "omen",
+      "omens"
+    ],
+    "zh_cn": [
+      "之兆"
+    ],
+    "zh_tw": [
+      "之兆"
+    ],
+    "zh_hk": [
+      "之兆"
+    ],
+    "note": "Extracted from vanilla Bad/Raid/Trial Omen effects."
+  },
+  {
+    "id": "curated.enchantment.curse",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "curse",
+      "curses"
+    ],
+    "zh_cn": [
+      "诅咒"
+    ],
+    "zh_tw": [
+      "詛咒"
+    ],
+    "zh_hk": [
+      "詛咒"
+    ],
+    "note": "Extracted from vanilla curse enchantment names."
+  },
+  {
+    "id": "curated.enchantment.protection",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "protection",
+      "protections"
+    ],
+    "zh_cn": [
+      "保护"
+    ],
+    "zh_tw": [
+      "保護"
+    ],
+    "zh_hk": [
+      "保護"
+    ],
+    "note": "Extracted from vanilla protection enchantment names."
+  },
+  {
+    "id": "curated.entity.camel_husk",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "camel husk"
+    ],
+    "zh_cn": [
+      "骆驼尸壳"
+    ],
+    "zh_tw": [
+      "駱駝屍殼"
+    ],
+    "zh_hk": [
+      "駱駝屍殼"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.camel_husk_spawn_egg."
+  },
+  {
+    "id": "curated.entity.cave_spider",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "cave spider"
+    ],
+    "zh_cn": [
+      "洞穴蜘蛛"
+    ],
+    "zh_tw": [
+      "洞穴蜘蛛"
+    ],
+    "zh_hk": [
+      "洞穴蜘蛛"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.cave_spider_spawn_egg."
+  },
+  {
+    "id": "curated.entity.copper_golem",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper golem"
+    ],
+    "zh_cn": [
+      "铜傀儡"
+    ],
+    "zh_tw": [
+      "銅魔像"
+    ],
+    "zh_hk": [
+      "銅人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.copper_golem_spawn_egg."
+  },
+  {
+    "id": "curated.entity.display",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "display",
+      "displays"
+    ],
+    "zh_cn": [
+      "展示实体"
+    ],
+    "zh_tw": [
+      "展示實體"
+    ],
+    "zh_hk": [
+      "展示實體"
+    ],
+    "note": "Extracted from vanilla block/item/text display entity names."
+  },
+  {
+    "id": "curated.entity.elder_guardian",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "elder guardian"
+    ],
+    "zh_cn": [
+      "远古守卫者"
+    ],
+    "zh_tw": [
+      "遠古深海守衛"
+    ],
+    "zh_hk": [
+      "遠古深海守衞"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.elder_guardian_spawn_egg."
+  },
+  {
+    "id": "curated.entity.ender_dragon",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "ender dragon"
+    ],
+    "zh_cn": [
+      "末影龙"
+    ],
+    "zh_tw": [
+      "終界龍"
+    ],
+    "zh_hk": [
+      "終界龍"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.ender_dragon_spawn_egg."
+  },
+  {
+    "id": "curated.entity.glow_squid",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "glow squid"
+    ],
+    "zh_cn": [
+      "发光鱿鱼"
+    ],
+    "zh_tw": [
+      "螢光魷魚"
+    ],
+    "zh_hk": [
+      "熒光墨魚"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.glow_squid_spawn_egg."
+  },
+  {
+    "id": "curated.entity.happy_ghast",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "happy ghast"
+    ],
+    "zh_cn": [
+      "快乐恶魂"
+    ],
+    "zh_tw": [
+      "快樂幽靈"
+    ],
+    "zh_hk": [
+      "快樂幽靈"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.happy_ghast_spawn_egg."
+  },
+  {
+    "id": "curated.entity.iron_golem",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "iron golem"
+    ],
+    "zh_cn": [
+      "铁傀儡"
+    ],
+    "zh_tw": [
+      "鐵魔像"
+    ],
+    "zh_hk": [
+      "鐵人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.iron_golem_spawn_egg."
+  },
+  {
+    "id": "curated.entity.magma_cube",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "magma cube"
+    ],
+    "zh_cn": [
+      "岩浆怪"
+    ],
+    "zh_tw": [
+      "岩漿立方怪"
+    ],
+    "zh_hk": [
+      "巖漿史萊姆"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.magma_cube_spawn_egg."
+  },
+  {
+    "id": "curated.entity.piglin_brute",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "piglin brute"
+    ],
+    "zh_cn": [
+      "猪灵蛮兵"
+    ],
+    "zh_tw": [
+      "豬布林蠻兵"
+    ],
+    "zh_hk": [
+      "殘暴豬人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.piglin_brute_spawn_egg."
+  },
+  {
+    "id": "curated.entity.polar_bear",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "polar bear"
+    ],
+    "zh_cn": [
+      "北极熊"
+    ],
+    "zh_tw": [
+      "北極熊"
+    ],
+    "zh_hk": [
+      "北極熊"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.polar_bear_spawn_egg."
+  },
+  {
+    "id": "curated.entity.skeleton_horse",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "skeleton horse"
+    ],
+    "zh_cn": [
+      "骷髅马"
+    ],
+    "zh_tw": [
+      "骷髏馬"
+    ],
+    "zh_hk": [
+      "骷髏骨馬"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.skeleton_horse_spawn_egg."
+  },
+  {
+    "id": "curated.entity.snow_golem",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "snow golem"
+    ],
+    "zh_cn": [
+      "雪傀儡"
+    ],
+    "zh_tw": [
+      "雪人"
+    ],
+    "zh_hk": [
+      "雪人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.snow_golem_spawn_egg."
+  },
+  {
+    "id": "curated.entity.sulfur_cube",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "sulfur cube"
+    ],
+    "zh_cn": [
+      "硫方怪"
+    ],
+    "zh_tw": [
+      "硫磺立方怪"
+    ],
+    "zh_hk": [
+      "硫磺史萊姆"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.sulfur_cube_spawn_egg."
+  },
+  {
+    "id": "curated.entity.thrown",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "thrown"
+    ],
+    "zh_cn": [
+      "掷出的"
+    ],
+    "zh_tw": [
+      "拋出的"
+    ],
+    "zh_hk": [
+      "拋出的"
+    ],
+    "note": "Extracted from vanilla thrown entity names."
+  },
+  {
+    "id": "curated.entity.trader_llama",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "trader llama"
+    ],
+    "zh_cn": [
+      "行商羊驼"
+    ],
+    "zh_tw": [
+      "商駝"
+    ],
+    "zh_hk": [
+      "商隊羊駝"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.trader_llama_spawn_egg."
+  },
+  {
+    "id": "curated.entity.tropical_fish",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "tropical fish"
+    ],
+    "zh_cn": [
+      "热带鱼"
+    ],
+    "zh_tw": [
+      "熱帶魚"
+    ],
+    "zh_hk": [
+      "熱帶魚"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.tropical_fish_spawn_egg."
+  },
+  {
+    "id": "curated.entity.wandering_trader",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wandering trader"
+    ],
+    "zh_cn": [
+      "流浪商人"
+    ],
+    "zh_tw": [
+      "流浪商人"
+    ],
+    "zh_hk": [
+      "流浪商人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.wandering_trader_spawn_egg."
+  },
+  {
+    "id": "curated.entity.wither_skeleton",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wither skeleton"
+    ],
+    "zh_cn": [
+      "凋灵骷髅"
+    ],
+    "zh_tw": [
+      "凋零骷髏"
+    ],
+    "zh_hk": [
+      "凋零骷髏骨"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.wither_skeleton_spawn_egg."
+  },
+  {
+    "id": "curated.entity.zombie_horse",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "zombie horse"
+    ],
+    "zh_cn": [
+      "僵尸马"
+    ],
+    "zh_tw": [
+      "殭屍馬"
+    ],
+    "zh_hk": [
+      "喪屍馬"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.zombie_horse_spawn_egg."
+  },
+  {
+    "id": "curated.entity.zombie_nautilus",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "zombie nautilus"
+    ],
+    "zh_cn": [
+      "僵尸鹦鹉螺"
+    ],
+    "zh_tw": [
+      "殭屍鸚鵡螺"
+    ],
+    "zh_hk": [
+      "喪屍鸚鵡螺"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.zombie_nautilus_spawn_egg."
+  },
+  {
+    "id": "curated.entity.zombie_villager",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "zombie villager"
+    ],
+    "zh_cn": [
+      "僵尸村民"
+    ],
+    "zh_tw": [
+      "殭屍村民"
+    ],
+    "zh_hk": [
+      "喪屍村民"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.zombie_villager_spawn_egg."
+  },
+  {
+    "id": "curated.entity.zombified_piglin",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "zombified piglin"
+    ],
+    "zh_cn": [
+      "僵尸猪灵"
+    ],
+    "zh_tw": [
+      "殭屍化豬布林"
+    ],
+    "zh_hk": [
+      "喪屍豬人"
+    ],
+    "note": "Extracted entity phrase from vanilla item.minecraft.zombified_piglin_spawn_egg."
+  },
+  {
+    "id": "curated.filled_map.explorer_map",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "explorer map",
+      "explorer maps"
+    ],
+    "zh_cn": [
+      "探险家地图"
+    ],
+    "zh_tw": [
+      "探險家地圖"
+    ],
+    "zh_hk": [
+      "探險家地圖"
+    ],
+    "note": "Extracted from vanilla explorer map names."
+  },
+  {
+    "id": "curated.filled_map.village_map",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "village map",
+      "village maps"
+    ],
+    "zh_cn": [
+      "村庄地图"
+    ],
+    "zh_tw": [
+      "村莊地圖"
+    ],
+    "zh_hk": [
+      "村莊地圖"
+    ],
+    "note": "Extracted from vanilla village map names."
+  },
+  {
+    "id": "curated.item.apple",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "apple"
+    ],
+    "zh_cn": [
+      "苹果"
+    ],
+    "zh_tw": [
+      "蘋果"
+    ],
+    "zh_hk": [
+      "蘋果"
+    ],
+    "note": "Extracted from 3 vanilla item names ending in \"apple\"."
+  },
+  {
+    "id": "curated.item.arrow",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "arrow",
+      "arrows"
+    ],
+    "zh_cn": [
+      "箭"
+    ],
+    "zh_tw": [
+      "箭矢"
+    ],
+    "zh_hk": [
+      "箭"
+    ],
+    "note": "Extracted from vanilla item.minecraft.arrow."
+  },
+  {
+    "id": "curated.item.axe",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "axe",
+      "axes"
+    ],
+    "zh_cn": [
+      "斧"
+    ],
+    "zh_tw": [
+      "斧"
+    ],
+    "zh_hk": [
+      "斧頭"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"axe\"."
+  },
+  {
+    "id": "curated.item.banner_pattern",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "banner pattern",
+      "banner patterns"
+    ],
+    "zh_cn": [
+      "旗帜图案"
+    ],
+    "zh_tw": [
+      "旗幟圖案"
+    ],
+    "zh_hk": [
+      "橫額圖案"
+    ],
+    "note": "Extracted from 10 vanilla item names ending in \"banner pattern\"."
+  },
+  {
+    "id": "curated.item.boots",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "boots",
+      "boot"
+    ],
+    "zh_cn": [
+      "靴子"
+    ],
+    "zh_tw": [
+      "靴子"
+    ],
+    "zh_hk": [
+      "靴"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"boots\"."
+  },
+  {
+    "id": "curated.item.bottle_o_enchanting",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "bottle o' enchanting",
+      "bottles o' enchanting"
+    ],
+    "zh_cn": [
+      "附魔之瓶"
+    ],
+    "zh_tw": [
+      "經驗瓶"
+    ],
+    "zh_hk": [
+      "附魔之瓶"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.experience_bottle used by entity.minecraft.experience_bottle."
+  },
+  {
+    "id": "curated.item.bucket",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "bucket",
+      "buckets"
+    ],
+    "zh_cn": [
+      "桶"
+    ],
+    "zh_tw": [
+      "桶"
+    ],
+    "zh_hk": [
+      "桶"
+    ],
+    "note": "Extracted from 5 vanilla item names ending in \"bucket\"."
+  },
+  {
+    "id": "curated.item.bundle",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "bundle",
+      "bundles"
+    ],
+    "zh_cn": [
+      "收纳袋"
+    ],
+    "zh_tw": [
+      "束口袋"
+    ],
+    "zh_hk": [
+      "收納袋"
+    ],
+    "note": "Extracted from 17 vanilla item names ending in \"bundle\"."
+  },
+  {
+    "id": "curated.item.chainmail",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "chainmail"
+    ],
+    "zh_cn": [
+      "锁链"
+    ],
+    "zh_tw": [
+      "鎖鏈"
+    ],
+    "zh_hk": [
+      "鎖鏈"
+    ],
+    "note": "Extracted from 4 vanilla item names starting with \"chainmail\"."
+  },
+  {
+    "id": "curated.item.chest_minecart",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "minecart with chest",
+      "chest minecart",
+      "chest minecarts"
+    ],
+    "zh_cn": [
+      "运输矿车"
+    ],
+    "zh_tw": [
+      "儲物箱礦車"
+    ],
+    "zh_hk": [
+      "儲物箱礦車"
+    ],
+    "note": "Extracted from vanilla item.minecraft.chest_minecart."
+  },
+  {
+    "id": "curated.item.chest_raft",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "raft with chest",
+      "chest raft",
+      "chest rafts",
+      "rafts with chest"
+    ],
+    "zh_cn": [
+      "运输竹筏"
+    ],
+    "zh_tw": [
+      "儲物箱竹筏"
+    ],
+    "zh_hk": [
+      "儲物箱竹筏"
+    ],
+    "note": "Extracted from vanilla item.minecraft.bamboo_chest_raft."
+  },
+  {
+    "id": "curated.item.chestplate",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "chestplate",
+      "chestplates"
+    ],
+    "zh_cn": [
+      "胸甲"
+    ],
+    "zh_tw": [
+      "胸甲"
+    ],
+    "zh_hk": [
+      "胸甲"
+    ],
+    "note": "Extracted from 6 vanilla item names ending in \"chestplate\"."
+  },
+  {
+    "id": "curated.item.copper",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "copper"
+    ],
+    "zh_cn": [
+      "铜"
+    ],
+    "zh_tw": [
+      "銅"
+    ],
+    "zh_hk": [
+      "銅"
+    ],
+    "note": "Extracted from 15 vanilla item names starting with \"copper\"."
+  },
+  {
+    "id": "curated.item.diamond",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "diamond"
+    ],
+    "zh_cn": [
+      "钻石"
+    ],
+    "zh_tw": [
+      "鑽石"
+    ],
+    "zh_hk": [
+      "鑽石"
+    ],
+    "note": "Extracted from 13 vanilla item names starting with \"diamond\"."
+  },
+  {
+    "id": "curated.item.dragon_breath",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "dragon's breath",
+      "dragon breath"
+    ],
+    "zh_cn": [
+      "龙息"
+    ],
+    "zh_tw": [
+      "龍之吐息"
+    ],
+    "zh_hk": [
+      "龍之吐息"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.dragon_breath."
+  },
+  {
+    "id": "curated.item.dye",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "dye",
+      "dyes"
+    ],
+    "zh_cn": [
+      "染料"
+    ],
+    "zh_tw": [
+      "染料"
+    ],
+    "zh_hk": [
+      "染料"
+    ],
+    "note": "Extracted from 16 vanilla item names ending in \"dye\"."
+  },
+  {
+    "id": "curated.item.egg",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "egg",
+      "eggs"
+    ],
+    "zh_cn": [
+      "鸡蛋"
+    ],
+    "zh_tw": [
+      "雞蛋"
+    ],
+    "zh_hk": [
+      "雞蛋"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.egg."
+  },
+  {
+    "id": "curated.item.end_crystal",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "end crystal",
+      "end crystals"
+    ],
+    "zh_cn": [
+      "末地水晶"
+    ],
+    "zh_tw": [
+      "終界水晶"
+    ],
+    "zh_hk": [
+      "終界水晶"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.end_crystal."
+  },
+  {
+    "id": "curated.item.ender_pearl",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "ender pearl",
+      "ender pearls"
+    ],
+    "zh_cn": [
+      "末影珍珠"
+    ],
+    "zh_tw": [
+      "終界珍珠"
+    ],
+    "zh_hk": [
+      "終界珍珠"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.ender_pearl used by entity.minecraft.ender_pearl."
+  },
+  {
+    "id": "curated.item.eye_of_ender",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "eye of ender",
+      "eyes of ender"
+    ],
+    "zh_cn": [
+      "末影之眼"
+    ],
+    "zh_tw": [
+      "終界之眼"
+    ],
+    "zh_hk": [
+      "終界之眼"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.ender_eye."
+  },
+  {
+    "id": "curated.item.fermented_spider_eye",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "fermented spider eye",
+      "fermented spider eyes"
+    ],
+    "zh_cn": [
+      "发酵蛛眼"
+    ],
+    "zh_tw": [
+      "發酵蜘蛛眼"
+    ],
+    "zh_hk": [
+      "發酵蜘蛛眼"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.fermented_spider_eye."
+  },
+  {
+    "id": "curated.item.fire_charge",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "fire charge",
+      "fire charges"
+    ],
+    "zh_cn": [
+      "火焰弹"
+    ],
+    "zh_tw": [
+      "火焰彈"
+    ],
+    "zh_hk": [
+      "火焰彈"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.fire_charge."
+  },
+  {
+    "id": "curated.item.furnace_minecart",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "minecart with furnace",
+      "furnace minecart",
+      "furnace minecarts"
+    ],
+    "zh_cn": [
+      "动力矿车"
+    ],
+    "zh_tw": [
+      "熔爐礦車"
+    ],
+    "zh_hk": [
+      "熔爐礦車"
+    ],
+    "note": "Extracted from vanilla item.minecraft.furnace_minecart."
+  },
+  {
+    "id": "curated.item.glow_item_frame",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "glow item frame",
+      "glow item frames"
+    ],
+    "zh_cn": [
+      "荧光物品展示框"
+    ],
+    "zh_tw": [
+      "螢光物品展示框"
+    ],
+    "zh_hk": [
+      "熒光物品展示框"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.glow_item_frame."
+  },
+  {
+    "id": "curated.item.golden",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "golden"
+    ],
+    "zh_cn": [
+      "金"
+    ],
+    "zh_tw": [
+      "金"
+    ],
+    "zh_hk": [
+      "金"
+    ],
+    "note": "Extracted from 14 vanilla item names starting with \"golden\"."
+  },
+  {
+    "id": "curated.item.harness",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "harness",
+      "harnesses"
+    ],
+    "zh_cn": [
+      "挽具"
+    ],
+    "zh_tw": [
+      "帽鞍"
+    ],
+    "zh_hk": [
+      "牽引器具"
+    ],
+    "note": "Extracted from 17 vanilla item names ending in \"harness\"."
+  },
+  {
+    "id": "curated.item.helmet",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "helmet",
+      "helmets"
+    ],
+    "zh_cn": [
+      "头盔"
+    ],
+    "zh_tw": [
+      "頭盔"
+    ],
+    "zh_hk": [
+      "頭盔"
+    ],
+    "note": "Extracted from 6 vanilla item names ending in \"helmet\"."
+  },
+  {
+    "id": "curated.item.hoe",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "hoe",
+      "hoes"
+    ],
+    "zh_cn": [
+      "锄"
+    ],
+    "zh_tw": [
+      "鋤"
+    ],
+    "zh_hk": [
+      "鋤頭"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"hoe\"."
+  },
+  {
+    "id": "curated.item.hopper_minecart",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "minecart with hopper",
+      "hopper minecart",
+      "hopper minecarts"
+    ],
+    "zh_cn": [
+      "漏斗矿车"
+    ],
+    "zh_tw": [
+      "漏斗礦車"
+    ],
+    "zh_hk": [
+      "漏斗礦車"
+    ],
+    "note": "Extracted from vanilla item.minecraft.hopper_minecart."
+  },
+  {
+    "id": "curated.item.horse_armor",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "horse armor"
+    ],
+    "zh_cn": [
+      "马铠"
+    ],
+    "zh_tw": [
+      "製馬鎧"
+    ],
+    "zh_hk": [
+      "馬甲"
+    ],
+    "note": "Extracted from 6 vanilla item names ending in \"horse armor\"."
+  },
+  {
+    "id": "curated.item.ingot",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "ingot",
+      "ingots"
+    ],
+    "zh_cn": [
+      "锭"
+    ],
+    "zh_tw": [
+      "錠"
+    ],
+    "zh_hk": [
+      "錠"
+    ],
+    "note": "Extracted from 4 vanilla item names ending in \"ingot\"."
+  },
+  {
+    "id": "curated.item.iron",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "iron"
+    ],
+    "zh_cn": [
+      "铁"
+    ],
+    "zh_tw": [
+      "鐵"
+    ],
+    "zh_hk": [
+      "鐵"
+    ],
+    "note": "Extracted from 15 vanilla item names starting with \"iron\"."
+  },
+  {
+    "id": "curated.item.item_frame",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "item frame",
+      "item frames"
+    ],
+    "zh_cn": [
+      "物品展示框"
+    ],
+    "zh_tw": [
+      "物品展示框"
+    ],
+    "zh_hk": [
+      "物品展示框"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.item_frame."
+  },
+  {
+    "id": "curated.item.leather",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "leather"
+    ],
+    "zh_cn": [
+      "皮革"
+    ],
+    "zh_tw": [
+      "皮革"
+    ],
+    "zh_hk": [
+      "皮革"
+    ],
+    "note": "Extracted from 6 vanilla item names starting with \"leather\"."
+  },
+  {
+    "id": "curated.item.leggings",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "leggings",
+      "legging"
+    ],
+    "zh_cn": [
+      "护腿"
+    ],
+    "zh_tw": [
+      "護腿"
+    ],
+    "zh_hk": [
+      "護腳"
+    ],
+    "note": "Extracted from 6 vanilla item names ending in \"leggings\"."
+  },
+  {
+    "id": "curated.item.lingering_potion",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "lingering potion"
+    ],
+    "zh_cn": [
+      "滞留药水"
+    ],
+    "zh_tw": [
+      "滯留藥水"
+    ],
+    "zh_hk": [
+      "滯留藥水"
+    ],
+    "note": "Extracted from vanilla item.minecraft.lingering_potion."
+  },
+  {
+    "id": "curated.item.minecart",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "minecart",
+      "minecarts"
+    ],
+    "zh_cn": [
+      "矿车"
+    ],
+    "zh_tw": [
+      "礦車"
+    ],
+    "zh_hk": [
+      "礦車"
+    ],
+    "note": "Extracted from vanilla item.minecraft.minecart."
+  },
+  {
+    "id": "curated.item.music_disc",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "music disc",
+      "music discs"
+    ],
+    "zh_cn": [
+      "音乐唱片"
+    ],
+    "zh_tw": [
+      "唱片"
+    ],
+    "zh_hk": [
+      "唱片"
+    ],
+    "note": "Extracted from 21 vanilla item names ending in \"music disc\"."
+  },
+  {
+    "id": "curated.item.nautilus_armor",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "nautilus armor"
+    ],
+    "zh_cn": [
+      "鹦鹉螺铠"
+    ],
+    "zh_tw": [
+      "製鸚鵡螺鎧"
+    ],
+    "zh_hk": [
+      "鸚鵡螺甲"
+    ],
+    "note": "Extracted from 5 vanilla item names ending in \"nautilus armor\"."
+  },
+  {
+    "id": "curated.item.netherite",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "netherite"
+    ],
+    "zh_cn": [
+      "下界合金"
+    ],
+    "zh_tw": [
+      "獄髓"
+    ],
+    "zh_hk": [
+      "地獄合金"
+    ],
+    "note": "Extracted from 14 vanilla item names starting with \"netherite\"."
+  },
+  {
+    "id": "curated.item.netherite_upgrade",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "netherite upgrade"
+    ],
+    "zh_cn": [
+      "下界合金升级"
+    ],
+    "zh_tw": [
+      "獄髓升級"
+    ],
+    "zh_hk": [
+      "地獄合金升級"
+    ],
+    "note": "Extracted from vanilla upgrade.minecraft.netherite_upgrade."
+  },
+  {
+    "id": "curated.item.nugget",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "nugget",
+      "nuggets"
+    ],
+    "zh_cn": [
+      "粒"
+    ],
+    "zh_tw": [
+      "粒"
+    ],
+    "zh_hk": [
+      "粒"
+    ],
+    "note": "Extracted from 3 vanilla item names ending in \"nugget\"."
+  },
+  {
+    "id": "curated.item.phantom_membrane",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "phantom membrane",
+      "phantom membranes"
+    ],
+    "zh_cn": [
+      "幻翼膜"
+    ],
+    "zh_tw": [
+      "夜魅皮膜"
+    ],
+    "zh_hk": [
+      "夜魅膜"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.phantom_membrane."
+  },
+  {
+    "id": "curated.item.pickaxe",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "pickaxe",
+      "pickaxes"
+    ],
+    "zh_cn": [
+      "镐"
+    ],
+    "zh_tw": [
+      "鎬"
+    ],
+    "zh_hk": [
+      "鎬"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"pickaxe\"."
+  },
+  {
+    "id": "curated.item.potato",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "potato",
+      "potatoes"
+    ],
+    "zh_cn": [
+      "马铃薯",
+      "土豆"
+    ],
+    "zh_tw": [
+      "馬鈴薯"
+    ],
+    "zh_hk": [
+      "薯仔"
+    ],
+    "note": "Extracted from 3 vanilla item names ending in \"potato\"."
+  },
+  {
+    "id": "curated.item.potion",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "potion",
+      "potions"
+    ],
+    "zh_cn": [
+      "药水"
+    ],
+    "zh_tw": [
+      "藥水"
+    ],
+    "zh_hk": [
+      "藥水"
+    ],
+    "note": "Extracted from vanilla item.minecraft.potion."
+  },
+  {
+    "id": "curated.item.pottery_sherd",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "pottery sherd",
+      "pottery sherds"
+    ],
+    "zh_cn": [
+      "纹样陶片"
+    ],
+    "zh_tw": [
+      "陶器碎片"
+    ],
+    "zh_hk": [
+      "陶罐碎片"
+    ],
+    "note": "Extracted from 23 vanilla item names ending in \"pottery sherd\"."
+  },
+  {
+    "id": "curated.item.raft",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "raft",
+      "rafts"
+    ],
+    "zh_cn": [
+      "竹筏"
+    ],
+    "zh_tw": [
+      "竹筏"
+    ],
+    "zh_hk": [
+      "竹筏"
+    ],
+    "note": "Extracted from vanilla item.minecraft.bamboo_raft."
+  },
+  {
+    "id": "curated.item.seeds",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "seeds",
+      "seed"
+    ],
+    "zh_cn": [
+      "种子"
+    ],
+    "zh_tw": [
+      "種子"
+    ],
+    "zh_hk": [
+      "種子"
+    ],
+    "note": "Extracted from 5 vanilla item names ending in \"seeds\"."
+  },
+  {
+    "id": "curated.item.shovel",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "shovel",
+      "shovels"
+    ],
+    "zh_cn": [
+      "锹"
+    ],
+    "zh_tw": [
+      "鏟"
+    ],
+    "zh_hk": [
+      "鏟"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"shovel\"."
+  },
+  {
+    "id": "curated.item.smithing_template",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "smithing template",
+      "smithing templates"
+    ],
+    "zh_cn": [
+      "锻造模板"
+    ],
+    "zh_tw": [
+      "鍛造模板"
+    ],
+    "zh_hk": [
+      "鍛造模板"
+    ],
+    "note": "Extracted from 20 vanilla item names ending in \"smithing template\"."
+  },
+  {
+    "id": "curated.item.spawn_egg",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "spawn egg",
+      "spawn eggs"
+    ],
+    "zh_cn": [
+      "刷怪蛋"
+    ],
+    "zh_tw": [
+      "生怪蛋"
+    ],
+    "zh_hk": [
+      "生成蛋"
+    ],
+    "note": "Extracted from 88 vanilla item names ending in \"spawn egg\"."
+  },
+  {
+    "id": "curated.item.spider_eye",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "spider eye",
+      "spider eyes"
+    ],
+    "zh_cn": [
+      "蜘蛛眼"
+    ],
+    "zh_tw": [
+      "蜘蛛眼"
+    ],
+    "zh_hk": [
+      "蜘蛛眼"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.spider_eye."
+  },
+  {
+    "id": "curated.item.splash_potion",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "splash potion"
+    ],
+    "zh_cn": [
+      "喷溅药水"
+    ],
+    "zh_tw": [
+      "飛濺藥水"
+    ],
+    "zh_hk": [
+      "飛濺藥水"
+    ],
+    "note": "Extracted from vanilla item.minecraft.splash_potion."
+  },
+  {
+    "id": "curated.item.stone",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "stone"
+    ],
+    "zh_cn": [
+      "石"
+    ],
+    "zh_tw": [
+      "石"
+    ],
+    "zh_hk": [
+      "石"
+    ],
+    "note": "Extracted from 6 vanilla item names starting with \"stone\"."
+  },
+  {
+    "id": "curated.item.sword",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "sword",
+      "swords"
+    ],
+    "zh_cn": [
+      "剑"
+    ],
+    "zh_tw": [
+      "劍"
+    ],
+    "zh_hk": [
+      "劍"
+    ],
+    "note": "Extracted from 7 vanilla item names ending in \"sword\"."
+  },
+  {
+    "id": "curated.item.tipped_arrow",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "tipped arrow"
+    ],
+    "zh_cn": [
+      "药箭"
+    ],
+    "zh_tw": [
+      "藥水箭"
+    ],
+    "zh_hk": [
+      "藥水箭"
+    ],
+    "note": "Extracted from vanilla item.minecraft.tipped_arrow."
+  },
+  {
+    "id": "curated.item.tnt_minecart",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "minecart with tnt",
+      "tnt minecart",
+      "tnt minecarts"
+    ],
+    "zh_cn": [
+      "TNT矿车"
+    ],
+    "zh_tw": [
+      "TNT 礦車"
+    ],
+    "zh_hk": [
+      "TNT 礦車"
+    ],
+    "note": "Extracted from vanilla item.minecraft.tnt_minecart."
+  },
+  {
+    "id": "curated.item.wind_charge",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wind charge",
+      "wind charges"
+    ],
+    "zh_cn": [
+      "风弹"
+    ],
+    "zh_tw": [
+      "風彈"
+    ],
+    "zh_hk": [
+      "風彈"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.wind_charge."
+  },
+  {
+    "id": "curated.item.wooden",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "wooden"
+    ],
+    "zh_cn": [
+      "木"
+    ],
+    "zh_tw": [
+      "木"
+    ],
+    "zh_hk": [
+      "木"
+    ],
+    "note": "Extracted from 6 vanilla item names starting with \"wooden\"."
+  },
+  {
+    "id": "curated.trim_pattern.armor_trim",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "armor trim",
+      "armor trims"
+    ],
+    "zh_cn": [
+      "盔甲纹饰"
+    ],
+    "zh_tw": [
+      "盔甲紋樣"
+    ],
+    "zh_hk": [
+      "盔甲紋飾"
+    ],
+    "note": "Extracted from vanilla trim_pattern.minecraft.* names."
+  }
+]

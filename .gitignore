@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+.vitest/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local deployment config
+.env
+.env.*
+!.env.example
+/app-config.json
+
+# Local Minecraft inputs/exports
+*.jar
+Minecraft-Mods-Localizer*.zip
+minecraft-langpatch.json
+minecraft-phrase-mappings.json
+exports/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/*
+!.yarn/patches/
+!.yarn/plugins/
+!.yarn/releases/
+!.yarn/sdks/
+!.yarn/versions/

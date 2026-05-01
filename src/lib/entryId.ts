@@ -1,0 +1,18 @@
+import type { EntryId, TargetLocale } from "./types";
+
+export function makeEntryId(namespace: string, locale: TargetLocale, key: string): EntryId {
+  return `${namespace}/${locale}/${key}`;
+}
+
+export function parseEntryId(id: EntryId): { namespace: string; locale: TargetLocale; key: string } {
+  const firstSlash = id.indexOf("/");
+  const secondSlash = id.indexOf("/", firstSlash + 1);
+  if (firstSlash < 1 || secondSlash < firstSlash + 2) {
+    throw new Error(`Invalid entry id: ${id}`);
+  }
+  return {
+    namespace: id.slice(0, firstSlash),
+    locale: id.slice(firstSlash + 1, secondSlash) as TargetLocale,
+    key: id.slice(secondSlash + 1),
+  };
+}
