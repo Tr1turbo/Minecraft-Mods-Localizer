@@ -1,7 +1,6 @@
 import JSZip from "jszip";
 
-import type { CatalogRow, SourceKind, SourcePackScanResult, TargetLocale } from "./types";
-import { TARGET_LOCALES } from "./types";
+import type { CatalogRow, LocaleCode, SourceKind, SourcePackScanResult } from "./types";
 
 export interface ExportPackOptions {
   packFormat?: number;
@@ -13,7 +12,7 @@ export interface ExportPackOptions {
 
 export async function createResourcePackZip(
   rows: CatalogRow[],
-  locales: readonly TargetLocale[] = TARGET_LOCALES,
+  locales: readonly LocaleCode[] = [],
   options: ExportPackOptions = {},
 ): Promise<Blob> {
   const zip = new JSZip();
@@ -58,10 +57,11 @@ export async function createResourcePackZip(
     for (const locale of locales) {
       const data = localeOutput(output, namespace, locale);
       for (const row of namespaceRows) {
-        if (options.skipSources?.[row.entries[locale].final.source]) {
+        const entry = row.entries[locale];
+        if (!entry || options.skipSources?.[entry.final.source]) {
           continue;
         }
-        data[row.key] = row.entries[locale].final.value;
+        data[row.key] = entry.final.value;
       }
     }
   }

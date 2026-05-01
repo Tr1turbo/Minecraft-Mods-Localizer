@@ -1,15 +1,21 @@
 import { placeholdersMatch } from "./placeholders";
 import { createPatchValue, resolveBaseValue } from "./patches";
 import { DEFAULT_RUNTIME_PHRASE_MAPPINGS, selectPhraseGlossary } from "./phraseMappings";
+import { isChineseLocale } from "./locales";
 import type {
+  ConvertSourceSettings,
   EntryId,
   LangpackProjectPatch,
+  LocaleCode,
+  LocaleFallbacks,
+  LlmReferenceMode,
+  LlmReferenceValue,
   PatchValue,
   PhraseMapping,
   SourcePackScanResult,
-  TargetLocale,
   TranslationMap,
 } from "./types";
+import { DEFAULT_CONVERT_SOURCE_SETTINGS } from "./types";
 import { makeEntryId } from "./entryId";
 
 export const LLM_PROMPT_VERSION = "minecraft-mods-localizer-v1";
@@ -30,9 +36,12 @@ export interface LlmSettings {
 
 export interface LlmJob {
   namespace: string;
-  locale: TargetLocale;
+  targetLocale: LocaleCode;
   key: string;
-  english: string;
+  sourceLocale: LocaleCode;
+  sourceText: string;
+  sourceValues?: LlmReferenceValue[];
+  sourceReferenceMode?: LlmReferenceMode;
 }
 
 export interface LlmPatchResult {
@@ -42,6 +51,8 @@ export interface LlmPatchResult {
 
 export interface LlmRequestOptions {
   signal?: AbortSignal;
+  fallbackChains?: LocaleFallbacks;
+  convertSources?: ConvertSourceSettings;
 }
 
 export async function listLlmModels(settings: LlmSettings): Promise<string[]> {
@@ -92,13 +103,24 @@ export async function translateJobsWithLlm(
   }
 
   const payloadJobs = translatableJobs.map((job) => ({
-    id: makeEntryId(job.namespace, job.locale, job.key),
-    locale: job.locale,
+    id: makeEntryId(job.namespace, job.targetLocale, job.key),
+    targetLocale: job.targetLocale,
+    sourceLocale: job.sourceLocale,
     key: job.key,
-    english: job.english,
+    sourceText: job.sourceText,
+    sourceReferenceMode: job.sourceReferenceMode,
+    sourceValues: normalizedJobSourceValues(job).map((sourceValue) => ({
+      locale: sourceValue.locale,
+      source: sourceValue.source,
+      sourceLabel: sourceValue.sourceLabel,
+      text: sourceValue.value,
+    })),
   }));
   const promptVersion = promptVersionForSettings(settings);
-  const phraseGlossary = selectPhraseGlossary(translatableJobs, phraseMappings);
+  const phraseGlossary = selectPhraseGlossary(
+    translatableJobs.filter((job) => isChineseLocale(job.targetLocale)).map((job) => ({ key: job.key, english: glossarySourceText(job) })),
+    phraseMappings,
+  );
 
   const response = await fetch(`${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
     method: "POST",
@@ -121,7 +143,7 @@ export async function translateJobsWithLlm(
             promptVersion,
             instructions: resolvedUserPrompt(settings),
             glossaryInstruction:
-              "When phraseGlossary contains a relevant term, use the first value for the requested locale as the preferred term. Later values are accepted aliases.",
+              "When phraseGlossary contains a relevant term for targetLocale, use the first value for that locale as the preferred term. Later values are accepted aliases.",
             phraseGlossary,
             outputShape: "Return an object whose keys are item ids and whose values are translated strings.",
             items: payloadJobs,
@@ -147,17 +169,27 @@ export async function translateJobsWithLlm(
 
   for (const job of translatableJobs) {
     throwIfAborted(options.signal);
-    const id = makeEntryId(job.namespace, job.locale, job.key);
+    const id = makeEntryId(job.namespace, job.targetLocale, job.key);
     const translated = translations[id];
     if (typeof translated !== "string" || !translated.trim()) {
       warnings.push(`${id}: missing LLM translation`);
       continue;
     }
-    if (!placeholdersMatch(job.english, translated)) {
+    if (!placeholdersMatch(job.sourceText, translated)) {
       warnings.push(`${id}: rejected LLM translation because placeholders changed`);
       continue;
     }
-    const parent = resolveBaseValue(modTranslations, sourcePacks, job.namespace, job.locale, job.key, undefined, phraseMappings);
+    const parent = resolveBaseValue(
+      modTranslations,
+      sourcePacks,
+      job.namespace,
+      job.targetLocale,
+      job.key,
+      options.fallbackChains,
+      phraseMappings,
+      undefined,
+      options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
+    );
     patches[id] = await createPatchValue(translated, parent, {
       generatedBy: "llm",
       llmCandidateId: createLlmCandidateId(),
@@ -170,7 +202,26 @@ export async function translateJobsWithLlm(
 }
 
 function hasLlmSourceText(job: LlmJob): boolean {
-  return typeof job.english === "string" && job.english.trim().length > 0;
+  return typeof job.sourceText === "string" && job.sourceText.trim().length > 0;
+}
+
+function normalizedJobSourceValues(job: LlmJob): LlmReferenceValue[] {
+  const sourceValues = (job.sourceValues ?? []).filter((sourceValue) => sourceValue.value.trim().length > 0);
+  if (sourceValues.length) {
+    return sourceValues;
+  }
+  return [
+    {
+      locale: job.sourceLocale,
+      source: "fallback",
+      sourceLabel: `${job.sourceLocale} source`,
+      value: job.sourceText,
+    },
+  ];
+}
+
+function glossarySourceText(job: LlmJob): string {
+  return normalizedJobSourceValues(job).find((sourceValue) => sourceValue.locale === "en_us")?.value ?? job.sourceText;
 }
 
 async function translateJobsWithDebugLlm(
@@ -190,9 +241,19 @@ async function translateJobsWithDebugLlm(
 
   for (const [index, job] of jobs.entries()) {
     throwIfAborted(options.signal);
-    const id = makeEntryId(job.namespace, job.locale, job.key);
-    const parent = resolveBaseValue(modTranslations, sourcePacks, job.namespace, job.locale, job.key, undefined, phraseMappings);
-    patches[id] = await createPatchValue(debugTranslate(job.english, job.locale), parent, {
+    const id = makeEntryId(job.namespace, job.targetLocale, job.key);
+    const parent = resolveBaseValue(
+      modTranslations,
+      sourcePacks,
+      job.namespace,
+      job.targetLocale,
+      job.key,
+      options.fallbackChains,
+      phraseMappings,
+      undefined,
+      options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
+    );
+    patches[id] = await createPatchValue(debugTranslate(job.sourceText, job.targetLocale), parent, {
       generatedBy: "llm",
       llmCandidateId: createLlmCandidateId(),
       model: settings.model.trim() || "debug-simulated-llm",
@@ -241,7 +302,7 @@ function abortError(): Error {
   return error;
 }
 
-function debugTranslate(value: string, locale: TargetLocale): string {
+function debugTranslate(value: string, locale: LocaleCode): string {
   return `[debug ${locale}] ${value}`;
 }
 

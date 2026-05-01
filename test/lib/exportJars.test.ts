@@ -2,7 +2,9 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { createPatchedJarDownload, createPatchedJarExports } from "../../src/lib/exportJars";
-import type { CatalogRow, SourceKind, TargetLocale } from "../../src/lib/types";
+import type { CatalogRow, LocaleCode, SourceKind } from "../../src/lib/types";
+
+const TARGET_LOCALES = ["zh_cn", "zh_tw", "zh_hk"] as const;
 
 describe("patched jar export", () => {
   it("writes final locale JSON directly into matching mod jars", async () => {
@@ -12,7 +14,7 @@ describe("patched jar export", () => {
       "META-INF/mods.toml": "modLoader=\"javafml\"",
     });
 
-    const exports = await createPatchedJarExports([jar], [row("create", "block.create.shaft", "傳動桿", "传动杆", "傳動桿")]);
+    const exports = await createPatchedJarExports([jar], [row("create", "block.create.shaft", "傳動桿", "传动杆", "傳動桿")], TARGET_LOCALES);
 
     expect(exports).toHaveLength(1);
     expect(exports[0]).toMatchObject({
@@ -43,6 +45,7 @@ describe("patched jar export", () => {
     const download = await createPatchedJarDownload(
       [createJar, libraryJar],
       [row("create", "block.create.shaft", "傳動桿", "传动杆", "傳動桿")],
+      TARGET_LOCALES,
     );
 
     expect(download.filename).toBe("create-langpatched.jar");
@@ -60,6 +63,7 @@ describe("patched jar export", () => {
     const download = await createPatchedJarDownload(
       [brokenJar, createJar],
       [row("create", "block.create.shaft", "傳動桿", "传动杆", "傳動桿")],
+      TARGET_LOCALES,
     );
 
     expect(download.filename).toBe("create-langpatched.jar");
@@ -81,7 +85,7 @@ describe("patched jar export", () => {
         row("create", "jar.key", "Jar value", "Jar value", "Jar value", "jar"),
         row("create", "fallback.key", "Fallback value", "Fallback value", "Fallback value", "fallback"),
       ],
-      undefined,
+      TARGET_LOCALES,
       {
         skipSources: {
           jar: true,
@@ -111,6 +115,7 @@ describe("patched jar export", () => {
         row("create", "block.create.shaft", "傳動桿", "传动杆", "傳動桿"),
         row("railways", "block.railways.track", "軌道", "轨道", "軌道"),
       ],
+      TARGET_LOCALES,
     );
 
     expect(download.filename).toBe("Minecraft-Mods-Localizer-Patched-Jars.zip");
@@ -133,8 +138,9 @@ function row(namespace: string, key: string, zhTw: string, zhCn: string, zhHk: s
   return {
     namespace,
     key,
-    english: key,
-    hasEnglish: true,
+    sourceLocale: "en_us",
+    sourceValue: key,
+    hasSource: true,
     entries: {
       zh_cn: entry(namespace, "zh_cn", key, zhCn, source),
       zh_tw: entry(namespace, "zh_tw", key, zhTw, source),
@@ -143,14 +149,15 @@ function row(namespace: string, key: string, zhTw: string, zhCn: string, zhHk: s
   };
 }
 
-function entry(namespace: string, locale: TargetLocale, key: string, value: string, source: SourceKind): CatalogRow["entries"][TargetLocale] {
+function entry(namespace: string, locale: LocaleCode, key: string, value: string, source: SourceKind): CatalogRow["entries"][LocaleCode] {
   return {
     id: `${namespace}/${locale}/${key}`,
     namespace,
     locale,
     key,
-    english: key,
-    hasEnglish: true,
+    sourceLocale: "en_us",
+    sourceValue: key,
+    hasSource: true,
     base: { source, value, sourceLabel: "test" },
     final: { source, value, sourceLabel: "test" },
   };

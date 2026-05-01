@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { createResourcePackZip } from "../../src/lib/exportPack";
-import type { CatalogRow, SourceKind, TargetLocale } from "../../src/lib/types";
+import type { CatalogRow, LocaleCode, SourceKind } from "../../src/lib/types";
 
 describe("resource pack export", () => {
   it("skips entries whose final source is disabled for export", async () => {
@@ -31,8 +31,9 @@ function row(namespace: string, key: string, value: string, source: SourceKind):
   return {
     namespace,
     key,
-    english: key,
-    hasEnglish: true,
+    sourceLocale: "en_us",
+    sourceValue: key,
+    hasSource: true,
     entries: {
       zh_cn: entry(namespace, "zh_cn", key, value, source),
       zh_tw: entry(namespace, "zh_tw", key, value, source),
@@ -41,14 +42,15 @@ function row(namespace: string, key: string, value: string, source: SourceKind):
   };
 }
 
-function entry(namespace: string, locale: TargetLocale, key: string, value: string, source: SourceKind): CatalogRow["entries"][TargetLocale] {
+function entry(namespace: string, locale: LocaleCode, key: string, value: string, source: SourceKind): CatalogRow["entries"][LocaleCode] {
   return {
     id: `${namespace}/${locale}/${key}`,
     namespace,
     locale,
     key,
-    english: key,
-    hasEnglish: true,
+    sourceLocale: "en_us",
+    sourceValue: key,
+    hasSource: true,
     base: { source, value, sourceLabel: "test" },
     final: { source, value, sourceLabel: "test" },
   };

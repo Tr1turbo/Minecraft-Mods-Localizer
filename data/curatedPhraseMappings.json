@@ -46,33 +46,15 @@
       "cave"
     ],
     "zh_cn": [
-      "洞"
+      "洞穴"
     ],
     "zh_tw": [
-      "洞窟"
+      "洞穴", "洞窟"
     ],
     "zh_hk": [
-      "洞"
+      "洞穴"
     ],
     "note": "Extracted from vanilla cave biome names."
-  },
-  {
-    "id": "curated.biome.deep",
-    "enabled": true,
-    "source": "curated",
-    "en_us": [
-      "deep"
-    ],
-    "zh_cn": [
-      "深"
-    ],
-    "zh_tw": [
-      "深"
-    ],
-    "zh_hk": [
-      "深"
-    ],
-    "note": "Extracted from vanilla deep ocean biome names."
   },
   {
     "id": "curated.biome.forest",
@@ -1424,7 +1406,7 @@
       "染色玻璃板"
     ],
     "zh_tw": [
-      "玻璃片"
+      "*色玻璃片"
     ],
     "zh_hk": [
       "染色玻璃片"
@@ -1836,79 +1818,6 @@
       "銅人"
     ],
     "note": "Extracted entity phrase from vanilla item.minecraft.copper_golem_spawn_egg."
-  },
-  {
-    "id": "curated.entity.display",
-    "enabled": true,
-    "source": "curated",
-    "en_us": [
-      "display",
-      "displays"
-    ],
-    "zh_cn": [
-      "展示实体"
-    ],
-    "zh_tw": [
-      "展示實體"
-    ],
-    "zh_hk": [
-      "展示實體"
-    ],
-    "note": "Extracted from vanilla block/item/text display entity names."
-  },
-  {
-    "id": "curated.entity.elder_guardian",
-    "enabled": true,
-    "source": "curated",
-    "en_us": [
-      "elder guardian"
-    ],
-    "zh_cn": [
-      "远古守卫者"
-    ],
-    "zh_tw": [
-      "遠古深海守衛"
-    ],
-    "zh_hk": [
-      "遠古深海守衞"
-    ],
-    "note": "Extracted entity phrase from vanilla item.minecraft.elder_guardian_spawn_egg."
-  },
-  {
-    "id": "curated.entity.ender_dragon",
-    "enabled": true,
-    "source": "curated",
-    "en_us": [
-      "ender dragon"
-    ],
-    "zh_cn": [
-      "末影龙"
-    ],
-    "zh_tw": [
-      "終界龍"
-    ],
-    "zh_hk": [
-      "終界龍"
-    ],
-    "note": "Extracted entity phrase from vanilla item.minecraft.ender_dragon_spawn_egg."
-  },
-  {
-    "id": "curated.entity.glow_squid",
-    "enabled": true,
-    "source": "curated",
-    "en_us": [
-      "glow squid"
-    ],
-    "zh_cn": [
-      "发光鱿鱼"
-    ],
-    "zh_tw": [
-      "螢光魷魚"
-    ],
-    "zh_hk": [
-      "熒光墨魚"
-    ],
-    "note": "Extracted entity phrase from vanilla item.minecraft.glow_squid_spawn_egg."
   },
   {
     "id": "curated.entity.happy_ghast",

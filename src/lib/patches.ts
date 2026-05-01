@@ -1,28 +1,37 @@
 import { convertChineseLocale } from "./convert";
 import { makeEntryId } from "./entryId";
 import { sha256Text } from "./hash";
+import { isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./locales";
 import { normalizePhraseMappingOverrides } from "./phraseMappings";
 import type {
   CandidateValue,
-  ConvertSourceSettings,
   CatalogRow,
+  ConvertSourceSettings,
   EntryId,
   LangpackProjectPatch,
+  LocaleCode,
   LocaleFallbacks,
+  LlmReferenceMode,
+  LlmReferenceValue,
   PatchValue,
   PhraseMapping,
+  ReferenceValue,
   ResolvedEntry,
   SourceKind,
   SourcePackScanResult,
-  TargetLocale,
   TranslationMap,
 } from "./types";
-import { DEFAULT_CONVERT_SOURCE_SETTINGS, DEFAULT_LOCALE_FALLBACKS, TARGET_LOCALES } from "./types";
+import { DEFAULT_CHINESE_LOCALE_FALLBACKS, DEFAULT_CONVERT_SOURCE_SETTINGS } from "./types";
+
+type LocaleCandidate = CandidateValue & { locale: LocaleCode };
+const DEFAULT_FALLBACK_LOCALE = "en_us";
 
 export function createEmptyProjectPatch(): LangpackProjectPatch {
   return {
-    schemaVersion: 1,
-    locales: ["zh_cn", "zh_tw", "zh_hk"],
+    schemaVersion: 2,
+    locales: [],
+    fallbackChains: {},
+    sourceLocalePriority: [],
     modFingerprints: [],
     sourcePackOrder: [],
     llmCandidates: {},
@@ -35,13 +44,30 @@ export function normalizeProjectPatch(raw: unknown): LangpackProjectPatch {
   if (!raw || typeof raw !== "object") {
     throw new Error("Project patch must be a JSON object.");
   }
-  const input = raw as Partial<LangpackProjectPatch>;
-  if (input.schemaVersion !== 1) {
+  const input = raw as Record<string, unknown>;
+  if (input.schemaVersion === 1) {
+    const legacyLocales = uniqueLocaleCodes(Array.isArray(input.locales) ? input.locales : Object.keys(DEFAULT_CHINESE_LOCALE_FALLBACKS));
+    return {
+      schemaVersion: 2,
+      locales: legacyLocales,
+      fallbackChains: normalizeFallbackChains(input.fallbackChains, legacyLocales, DEFAULT_CHINESE_LOCALE_FALLBACKS),
+      sourceLocalePriority: uniqueLocaleCodes(Array.isArray(input.sourceLocalePriority) ? input.sourceLocalePriority : []),
+      modFingerprints: Array.isArray(input.modFingerprints) ? input.modFingerprints : [],
+      sourcePackOrder: Array.isArray(input.sourcePackOrder) ? input.sourcePackOrder : [],
+      llmCandidates: validPatchArrayRecord(input.llmCandidates),
+      patches: validPatchRecord(input.patches),
+      phraseMappings: normalizePhraseMappingOverrides(input.phraseMappings),
+    };
+  }
+  if (input.schemaVersion !== 2) {
     throw new Error("Unsupported project patch schema version.");
   }
+  const locales = uniqueLocaleCodes(Array.isArray(input.locales) ? input.locales : []);
   return {
-    schemaVersion: 1,
-    locales: ["zh_cn", "zh_tw", "zh_hk"],
+    schemaVersion: 2,
+    locales,
+    fallbackChains: normalizeFallbackChains(input.fallbackChains, locales),
+    sourceLocalePriority: uniqueLocaleCodes(Array.isArray(input.sourceLocalePriority) ? input.sourceLocalePriority : []),
     modFingerprints: Array.isArray(input.modFingerprints) ? input.modFingerprints : [],
     sourcePackOrder: Array.isArray(input.sourcePackOrder) ? input.sourcePackOrder : [],
     llmCandidates: validPatchArrayRecord(input.llmCandidates),
@@ -54,25 +80,47 @@ export function buildCatalog(
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
   project: LangpackProjectPatch,
-  fallbackChains: LocaleFallbacks = DEFAULT_LOCALE_FALLBACKS,
+  fallbackChains: LocaleFallbacks = project.fallbackChains ?? {},
   phraseMappings: readonly PhraseMapping[] = [],
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
-  locales: readonly TargetLocale[] = TARGET_LOCALES,
+  locales: readonly LocaleCode[] = project.locales ?? [],
 ): CatalogRow[] {
+  const targetLocales = uniqueLocaleCodes(locales);
+  if (targetLocales.length === 0) {
+    return [];
+  }
+
   const rows: CatalogRow[] = [];
   const namespaces = Object.keys(modTranslations).sort();
 
   for (const namespace of namespaces) {
-    const keys = collectNamespaceKeys(modTranslations, namespace, locales);
+    const keys = collectNamespaceKeys(modTranslations, sourcePacks, namespace);
     for (const key of keys) {
-      const english = englishValueOrKey(modTranslations, namespace, key);
       const entries = Object.fromEntries(
-        locales.map((locale) => {
-          const resolved = resolveEntry(modTranslations, sourcePacks, project, namespace, locale, key, fallbackChains, phraseMappings, convertSources);
+        targetLocales.map((locale) => {
+          const resolved = resolveEntry(
+            modTranslations,
+            sourcePacks,
+            project,
+            namespace,
+            locale,
+            key,
+            fallbackChains,
+            phraseMappings,
+            convertSources,
+          );
           return [locale, resolved];
         }),
       ) as CatalogRow["entries"];
-      rows.push({ namespace, key, english: english.value, hasEnglish: english.hasEnglish, entries });
+      const firstEntry = entries[targetLocales[0]];
+      rows.push({
+        namespace,
+        key,
+        sourceLocale: firstEntry?.sourceLocale ?? "",
+        sourceValue: firstEntry?.sourceValue ?? key,
+        hasSource: firstEntry?.hasSource ?? false,
+        entries,
+      });
     }
   }
 
@@ -84,15 +132,26 @@ export function resolveEntry(
   sourcePacks: SourcePackScanResult[],
   project: LangpackProjectPatch,
   namespace: string,
-  locale: TargetLocale,
+  locale: LocaleCode,
   key: string,
-  fallbackChains: LocaleFallbacks = DEFAULT_LOCALE_FALLBACKS,
+  fallbackChains: LocaleFallbacks = project.fallbackChains ?? {},
   phraseMappings: readonly PhraseMapping[] = [],
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
 ): ResolvedEntry {
-  const id = makeEntryId(namespace, locale, key);
-  const english = englishValueOrKey(modTranslations, namespace, key);
-  const base = resolveBaseValue(modTranslations, sourcePacks, namespace, locale, key, fallbackChains, phraseMappings, project, convertSources);
+  const targetLocale = normalizeLocaleCode(locale);
+  const id = makeEntryId(namespace, targetLocale, key);
+  const source = resolveSourceValue(modTranslations, sourcePacks, namespace, targetLocale, key, fallbackChains, project, convertSources);
+  const base = resolveBaseValue(
+    modTranslations,
+    sourcePacks,
+    namespace,
+    targetLocale,
+    key,
+    fallbackChains,
+    phraseMappings,
+    project,
+    convertSources,
+  );
   const patch = project.patches?.[id];
 
   let final: CandidateValue = base;
@@ -101,6 +160,7 @@ export function resolveEntry(
     final = {
       source: patchSourceFromMeta(patch),
       value: patch.value,
+      locale: targetLocale,
       sourceLabel:
         generatedBy === "llm" || Boolean(patch.meta?.model)
           ? (patch.meta?.model ?? "LLM")
@@ -110,146 +170,240 @@ export function resolveEntry(
     };
   }
 
-  return { id, namespace, locale, key, english: english.value, hasEnglish: english.hasEnglish, base, patch, final };
+  return {
+    id,
+    namespace,
+    locale: targetLocale,
+    key,
+    sourceLocale: source.locale ?? "",
+    sourceValue: source.value,
+    hasSource: source.source !== "missing",
+    base,
+    patch,
+    final,
+  };
 }
 
 export function resolveBaseValue(
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
   namespace: string,
-  locale: TargetLocale,
+  locale: LocaleCode,
   key: string,
-  fallbackChains: LocaleFallbacks = DEFAULT_LOCALE_FALLBACKS,
+  fallbackChains: LocaleFallbacks = {},
   phraseMappings: readonly PhraseMapping[] = [],
   project: LangpackProjectPatch | undefined = undefined,
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
 ): CandidateValue {
+  const targetLocale = normalizeLocaleCode(locale);
   for (const pack of sourcePacks) {
-    const value = pack.translations[namespace]?.[locale]?.[key];
+    const value = pack.translations[namespace]?.[targetLocale]?.[key];
     if (value !== undefined) {
-      return { source: "resourcePack", value, sourceLabel: pack.fingerprint.name };
+      return { source: "resourcePack", value, locale: targetLocale, sourceLabel: pack.fingerprint.name };
     }
   }
 
-  const jarLocaleValue = modTranslations[namespace]?.[locale]?.[key];
+  const jarLocaleValue = modTranslations[namespace]?.[targetLocale]?.[key];
   if (jarLocaleValue !== undefined) {
-    return { source: "jar", value: jarLocaleValue, sourceLabel: "Mod jar locale" };
+    return { source: "jar", value: jarLocaleValue, locale: targetLocale, sourceLabel: "Mod jar locale" };
   }
 
-  for (const fallbackLocale of normalizedFallbackChain(locale, fallbackChains)) {
-    if (fallbackLocale === locale) {
-      continue;
-    }
-    if (fallbackLocale === "en_us") {
-      const englishFallback = englishFallbackValue(modTranslations, namespace, key);
-      if (englishFallback) {
-        return englishFallback;
-      }
-      continue;
-    }
-    if (!isTargetLocale(fallbackLocale)) {
-      continue;
-    }
-
-    const patch = project?.patches?.[makeEntryId(namespace, fallbackLocale, key)];
-    const patchSource = patch ? patchSourceFromMeta(patch) : undefined;
-
-    if (convertSources.manual && patch && patchSource === "manual") {
-      return convertedFallbackValue(patch.value, fallbackLocale, locale, `Converted from ${fallbackLocale} manual`, phraseMappings);
-    }
-
-    if (convertSources.llm) {
-      if (patch && patchSource === "llm") {
-        return convertedFallbackValue(patch.value, fallbackLocale, locale, `Converted from ${fallbackLocale} LLM`, phraseMappings);
-      }
-    }
-
-    if (convertSources.resourcePack) {
-      for (const pack of sourcePacks) {
-        const value = pack.translations[namespace]?.[fallbackLocale]?.[key];
-        if (value !== undefined) {
-          return convertedFallbackValue(value, fallbackLocale, locale, `Converted from ${fallbackLocale} in ${pack.fingerprint.name}`, phraseMappings);
-        }
-      }
-    }
-
-    if (convertSources.jar) {
-      const jarValue = modTranslations[namespace]?.[fallbackLocale]?.[key];
-      if (jarValue !== undefined) {
-        return convertedFallbackValue(jarValue, fallbackLocale, locale, `Converted from ${fallbackLocale} jar`, phraseMappings);
-      }
+  for (const fallbackLocale of fallbackCandidateLocales(targetLocale, fallbackChains)) {
+    const candidate = resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, fallbackLocale, key, convertSources);
+    if (candidate) {
+      return fallbackCandidateValue(candidate, targetLocale, phraseMappings);
     }
   }
 
   return {
     source: "missing",
     value: key,
+    locale: "",
     sourceLabel: "missing source",
   };
 }
 
-function englishValueOrKey(
+export function resolveSourceValue(
   modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
   namespace: string,
+  locale: LocaleCode,
   key: string,
-): { value: string; hasEnglish: boolean } {
-  const englishValue = modTranslations[namespace]?.en_us?.[key];
-  return englishValue !== undefined ? { value: englishValue, hasEnglish: true } : { value: key, hasEnglish: false };
+  fallbackChains: LocaleFallbacks = {},
+  project: LangpackProjectPatch | undefined = undefined,
+  convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
+): CandidateValue {
+  const targetLocale = normalizeLocaleCode(locale);
+  for (const sourceLocale of fallbackCandidateLocales(targetLocale, fallbackChains)) {
+    const candidate = resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, sourceLocale, key, convertSources);
+    if (candidate) {
+      return candidate;
+    }
+  }
+  return {
+    source: "missing",
+    value: key,
+    locale: "",
+    sourceLabel: "missing source",
+  };
 }
 
-function englishFallbackValue(modTranslations: TranslationMap, namespace: string, key: string): CandidateValue | undefined {
-  const englishValue = modTranslations[namespace]?.en_us?.[key];
-  if (englishValue === undefined) {
+export function resolveLlmReferenceValues(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  targetLocale: LocaleCode,
+  key: string,
+  fallbackChains: LocaleFallbacks = {},
+  convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
+  mode: LlmReferenceMode = "en_us",
+): LlmReferenceValue[] {
+  const normalizedTarget = normalizeLocaleCode(targetLocale);
+  const fallbackLocales = fallbackCandidateLocales(normalizedTarget, fallbackChains);
+  const enUsReference = referenceFromCandidate(resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, DEFAULT_FALLBACK_LOCALE, key, convertSources));
+  const fallbackReference = firstReferenceForLocales(modTranslations, sourcePacks, project, namespace, key, fallbackLocales, convertSources);
+  const allReferences = resolveReferenceValuesForKey(modTranslations, sourcePacks, project, namespace, key, convertSources, [DEFAULT_FALLBACK_LOCALE, ...fallbackLocales]).filter(
+    (reference) => reference.locale !== normalizedTarget,
+  );
+
+  if (mode === "all") {
+    return allReferences;
+  }
+  if (mode === "fallback") {
+    return fallbackReference ? [fallbackReference] : allReferences;
+  }
+  return enUsReference ? [enUsReference] : fallbackReference ? [fallbackReference] : allReferences;
+}
+
+export function resolveReferenceValuesForKey(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  key: string,
+  convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
+  priorityLocales: readonly LocaleCode[] = [],
+): ReferenceValue[] {
+  return referencesForLocales(
+    modTranslations,
+    sourcePacks,
+    project,
+    namespace,
+    key,
+    uniqueLocaleCodes([...priorityLocales, ...collectLocalesWithKey(modTranslations, sourcePacks, project, namespace, key).sort((left, right) => left.localeCompare(right))]),
+    convertSources,
+  );
+}
+
+function fallbackCandidateLocales(targetLocale: LocaleCode, fallbackChains: LocaleFallbacks): LocaleCode[] {
+  return normalizeFallbackChain(targetLocale, fallbackChains[targetLocale] ?? []);
+}
+
+function resolveLocaleCandidate(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  locale: LocaleCode,
+  key: string,
+  convertSources: ConvertSourceSettings,
+): LocaleCandidate | undefined {
+  const id = makeEntryId(namespace, locale, key);
+  const patch = project?.patches?.[id];
+  const patchSource = patch ? patchSourceFromMeta(patch) : undefined;
+
+  if (convertSources.manual && patch && patchSource === "manual") {
+    return { source: "manual", value: patch.value, locale, sourceLabel: `${locale} manual` };
+  }
+
+  if (convertSources.llm && patch && patchSource === "llm") {
+    return { source: "llm", value: patch.value, locale, sourceLabel: `${locale} LLM` };
+  }
+
+  if (convertSources.resourcePack) {
+    for (const pack of sourcePacks) {
+      const value = pack.translations[namespace]?.[locale]?.[key];
+      if (value !== undefined) {
+        return { source: "resourcePack", value, locale, sourceLabel: `${locale} in ${pack.fingerprint.name}` };
+      }
+    }
+  }
+
+  if (convertSources.jar) {
+    const value = modTranslations[namespace]?.[locale]?.[key];
+    if (value !== undefined) {
+      return { source: "jar", value, locale, sourceLabel: `${locale} jar` };
+    }
+  }
+
+  return undefined;
+}
+
+function firstReferenceForLocales(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  key: string,
+  locales: readonly LocaleCode[],
+  convertSources: ConvertSourceSettings,
+): ReferenceValue | undefined {
+  for (const locale of locales) {
+    const reference = referenceFromCandidate(resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, locale, key, convertSources));
+    if (reference) {
+      return reference;
+    }
+  }
+  return undefined;
+}
+
+function referencesForLocales(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  key: string,
+  locales: readonly LocaleCode[],
+  convertSources: ConvertSourceSettings,
+): ReferenceValue[] {
+  const references: ReferenceValue[] = [];
+  for (const locale of locales) {
+    const reference = referenceFromCandidate(resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, locale, key, convertSources));
+    if (reference) {
+      references.push(reference);
+    }
+  }
+  return references;
+}
+
+function referenceFromCandidate(candidate: LocaleCandidate | undefined): ReferenceValue | undefined {
+  if (!candidate) {
     return undefined;
   }
   return {
-    source: "fallback",
-    value: englishValue,
-    sourceLabel: "en_us fallback",
+    locale: candidate.locale,
+    source: candidate.source,
+    sourceLabel: candidate.sourceLabel,
+    value: candidate.value,
   };
 }
 
-function normalizedFallbackChain(locale: TargetLocale, fallbackChains: LocaleFallbacks): string[] {
-  const seen = new Set<string>();
-  const chain = [...(fallbackChains[locale] ?? [])]
-    .map((fallbackLocale) => fallbackLocale.trim().toLowerCase())
-    .filter((fallbackLocale) => fallbackLocale && fallbackLocale !== locale)
-    .filter((fallbackLocale) => {
-      if (seen.has(fallbackLocale)) {
-        return false;
-      }
-      seen.add(fallbackLocale);
-      return true;
-    });
-  if (!seen.has("en_us")) {
-    chain.push("en_us");
-  }
-  return chain;
-}
-
-function convertedFallbackValue(
-  value: string,
-  fallbackLocale: string,
-  locale: TargetLocale,
-  sourceLabel: string,
-  phraseMappings: readonly PhraseMapping[],
-): CandidateValue {
-  if (!isTargetLocale(fallbackLocale)) {
+function fallbackCandidateValue(candidate: LocaleCandidate, targetLocale: LocaleCode, phraseMappings: readonly PhraseMapping[]): CandidateValue {
+  if (isChineseLocale(candidate.locale) && isChineseLocale(targetLocale)) {
     return {
-      source: "fallback",
-      value,
-      sourceLabel: `${fallbackLocale} fallback`,
+      source: "converted",
+      value: convertChineseLocale(candidate.value, candidate.locale, targetLocale, phraseMappings),
+      locale: candidate.locale,
+      sourceLabel: `Converted from ${candidate.sourceLabel}`,
     };
   }
   return {
-    source: "converted",
-    value: convertChineseLocale(value, fallbackLocale, locale, phraseMappings),
-    sourceLabel,
+    source: "fallback",
+    value: candidate.value,
+    locale: candidate.locale,
+    sourceLabel: `${candidate.sourceLabel} fallback`,
   };
-}
-
-function isTargetLocale(locale: string): locale is TargetLocale {
-  return (TARGET_LOCALES as readonly string[]).includes(locale);
 }
 
 export async function createPatchValue(
@@ -313,16 +467,75 @@ function patchSourceFromMeta(patch: PatchValue): SourceKind {
 
 function collectNamespaceKeys(
   modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
   namespace: string,
-  locales: readonly TargetLocale[],
 ): string[] {
   const keys = new Set<string>();
-  for (const locale of ["en_us", ...locales]) {
-    for (const key of Object.keys(modTranslations[namespace]?.[locale] ?? {})) {
-      keys.add(key);
+  for (const namespaceLocales of [modTranslations[namespace], ...sourcePacks.map((pack) => pack.translations[namespace])]) {
+    for (const localeData of Object.values(namespaceLocales ?? {})) {
+      for (const key of Object.keys(localeData ?? {})) {
+        keys.add(key);
+      }
     }
   }
   return [...keys].sort();
+}
+
+function collectLocalesWithKey(
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch | undefined,
+  namespace: string,
+  key: string,
+): string[] {
+  const locales = new Set<string>();
+  for (const [locale, data] of Object.entries(modTranslations[namespace] ?? {})) {
+    if (data[key] !== undefined) {
+      locales.add(locale);
+    }
+  }
+  for (const pack of sourcePacks) {
+    for (const [locale, data] of Object.entries(pack.translations[namespace] ?? {})) {
+      if (data[key] !== undefined) {
+        locales.add(locale);
+      }
+    }
+  }
+  for (const id of Object.keys(project?.patches ?? {})) {
+    const prefix = `${namespace}/`;
+    if (!id.startsWith(prefix)) {
+      continue;
+    }
+    const rest = id.slice(prefix.length);
+    const separatorIndex = rest.indexOf("/");
+    if (separatorIndex < 0) {
+      continue;
+    }
+    const locale = rest.slice(0, separatorIndex);
+    const patchKey = rest.slice(separatorIndex + 1);
+    if (patchKey === key) {
+      locales.add(locale);
+    }
+  }
+  return [...locales];
+}
+
+function normalizeFallbackChains(raw: unknown, locales: readonly LocaleCode[], legacyFallbacks: LocaleFallbacks = {}): LocaleFallbacks {
+  const fallbackInput = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const result: LocaleFallbacks = {};
+  for (const locale of locales) {
+    const rawChain = Array.isArray(fallbackInput[locale])
+      ? fallbackInput[locale]
+      : Array.isArray(legacyFallbacks[locale])
+        ? legacyFallbacks[locale]
+        : [];
+    result[locale] = normalizeFallbackChain(locale, rawChain);
+  }
+  return result;
+}
+
+function normalizeFallbackChain(locale: LocaleCode, chain: readonly unknown[]): string[] {
+  return uniqueLocaleCodes([...chain, DEFAULT_FALLBACK_LOCALE]).filter((fallbackLocale) => fallbackLocale !== locale);
 }
 
 function validPatchRecord(value: unknown): Record<EntryId, PatchValue> {

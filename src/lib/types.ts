@@ -1,9 +1,10 @@
-export const TARGET_LOCALES = ["zh_cn", "zh_tw", "zh_hk"] as const;
+import { CHINESE_LOCALES } from "./locales";
 
-export type TargetLocale = (typeof TARGET_LOCALES)[number];
-export type LocaleFallbacks = Record<TargetLocale, string[]>;
+export type LocaleCode = string;
+export type ChineseLocale = (typeof CHINESE_LOCALES)[number];
+export type LocaleFallbacks = Record<LocaleCode, string[]>;
 
-export const DEFAULT_LOCALE_FALLBACKS: LocaleFallbacks = {
+export const DEFAULT_CHINESE_LOCALE_FALLBACKS: Record<ChineseLocale, string[]> = {
   zh_cn: ["zh_hk", "zh_tw", "en_us"],
   zh_tw: ["zh_hk", "zh_cn", "en_us"],
   zh_hk: ["zh_tw", "zh_cn", "en_us"],
@@ -13,6 +14,7 @@ export type SourceKind = "jar" | "resourcePack" | "llm" | "manual" | "converted"
 export type ConvertSourceKind = "manual" | "llm" | "resourcePack" | "jar";
 export type ConvertSourceSettings = Record<ConvertSourceKind, boolean>;
 export type ExportSkipSourceSettings = Record<SourceKind, boolean>;
+export type LlmReferenceMode = "en_us" | "fallback" | "all";
 
 export const DEFAULT_CONVERT_SOURCE_SETTINGS: ConvertSourceSettings = {
   manual: true,
@@ -35,8 +37,10 @@ export type EntryId = `${string}/${string}/${string}`;
 export type PhraseMappingSource = "vanilla" | "curated" | "custom";
 
 export interface LangpackProjectPatch {
-  schemaVersion: 1;
-  locales: ["zh_cn", "zh_tw", "zh_hk"];
+  schemaVersion: 2;
+  locales: LocaleCode[];
+  fallbackChains: LocaleFallbacks;
+  sourceLocalePriority: LocaleCode[];
   modFingerprints: FileFingerprint[];
   sourcePackOrder: FileFingerprint[];
   llmCandidates: Record<EntryId, PatchValue[]>;
@@ -51,7 +55,7 @@ export interface PatchValue {
   updatedAt: string;
   meta?: {
     generatedBy?: "llm" | "manual" | "converted";
-    convertedFromLocale?: TargetLocale;
+    convertedFromLocale?: LocaleCode;
     llmCandidateId?: string;
     model?: string;
     promptVersion?: string;
@@ -103,15 +107,26 @@ export interface CandidateValue {
   source: SourceKind;
   value: string;
   sourceLabel: string;
+  locale?: LocaleCode;
 }
+
+export interface ReferenceValue {
+  locale: LocaleCode;
+  source: SourceKind;
+  sourceLabel: string;
+  value: string;
+}
+
+export interface LlmReferenceValue extends ReferenceValue {}
 
 export interface ResolvedEntry {
   id: EntryId;
   namespace: string;
-  locale: TargetLocale;
+  locale: LocaleCode;
   key: string;
-  english: string;
-  hasEnglish: boolean;
+  sourceLocale: LocaleCode;
+  sourceValue: string;
+  hasSource: boolean;
   base: CandidateValue;
   patch?: PatchValue;
   final: CandidateValue;
@@ -120,7 +135,8 @@ export interface ResolvedEntry {
 export interface CatalogRow {
   namespace: string;
   key: string;
-  english: string;
-  hasEnglish: boolean;
-  entries: Record<TargetLocale, ResolvedEntry>;
+  sourceLocale: LocaleCode;
+  sourceValue: string;
+  hasSource: boolean;
+  entries: Record<LocaleCode, ResolvedEntry>;
 }

@@ -3,24 +3,23 @@ import JSZip from "jszip";
 import { fingerprintFile } from "./hash";
 import type {
   FileFingerprint,
+  LocaleCode,
   ModScanResult,
   ScanWarning,
   SourcePackScanResult,
-  TargetLocale,
   TranslationMap,
 } from "./types";
-import { TARGET_LOCALES } from "./types";
 
 const LANG_PATH_RE = /^assets\/([^/]+)\/lang\/([^/]+)\.json$/i;
 const JAR_IN_JAR_RE = /^META-INF\/jarjar\/.+\.jar$/i;
 
 type MergeMode = "keepFirst" | "replace";
 
-export async function scanModJars(files: File[], locales: readonly TargetLocale[] = TARGET_LOCALES): Promise<ModScanResult> {
+export async function scanModJars(files: File[], locales?: readonly LocaleCode[]): Promise<ModScanResult> {
   const translations: TranslationMap = {};
   const warnings: ScanWarning[] = [];
   const fingerprints: FileFingerprint[] = [];
-  const wantedLocales = new Set<string>(["en_us", ...locales]);
+  const wantedLocales = locales ? new Set<string>(locales.map((locale) => locale.trim().toLowerCase()).filter(Boolean)) : undefined;
 
   for (const file of files) {
     const buffer = await file.arrayBuffer();
@@ -31,10 +30,10 @@ export async function scanModJars(files: File[], locales: readonly TargetLocale[
   return { fingerprints, translations, warnings };
 }
 
-export async function scanResourcePack(file: File, locales: readonly TargetLocale[] = TARGET_LOCALES): Promise<SourcePackScanResult> {
+export async function scanResourcePack(file: File, locales?: readonly LocaleCode[]): Promise<SourcePackScanResult> {
   const translations: TranslationMap = {};
   const warnings: ScanWarning[] = [];
-  const wantedLocales = new Set<string>(["en_us", ...locales]);
+  const wantedLocales = locales ? new Set<string>(locales.map((locale) => locale.trim().toLowerCase()).filter(Boolean)) : undefined;
   const buffer = await file.arrayBuffer();
   const fingerprint = await fingerprintFile(file, buffer);
 
@@ -45,7 +44,7 @@ export async function scanResourcePack(file: File, locales: readonly TargetLocal
 async function scanZipBuffer(
   buffer: ArrayBuffer | Uint8Array,
   label: string,
-  wantedLocales: Set<string>,
+  wantedLocales: Set<string> | undefined,
   translations: TranslationMap,
   warnings: ScanWarning[],
   mergeMode: MergeMode,
@@ -78,7 +77,7 @@ async function scanZipBuffer(
 
     const [, namespace, rawLocale] = match;
     const locale = rawLocale.toLowerCase();
-    if (!wantedLocales.has(locale)) {
+    if (wantedLocales && !wantedLocales.has(locale)) {
       continue;
     }
 

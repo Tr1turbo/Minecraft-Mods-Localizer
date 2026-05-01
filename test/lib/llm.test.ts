@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeEntryId } from "../../src/lib/entryId";
-import { DEFAULT_LLM_SYSTEM_PROMPT, listLlmModels, mergeLlmPatches, parseTranslationObject, translateJobsWithLlm } from "../../src/lib/llm";
+import { DEFAULT_LLM_SYSTEM_PROMPT, listLlmModels, mergeLlmPatches, parseTranslationObject, translateJobsWithLlm, type LlmJob } from "../../src/lib/llm";
 import { createEmptyProjectPatch, createPatchValue } from "../../src/lib/patches";
 import { effectivePhraseMappings, phraseMappingsWithInternalVanilla } from "../../src/lib/phraseMappings";
 import type { TranslationMap } from "../../src/lib/types";
@@ -62,7 +62,7 @@ describe("llm", () => {
 
     const result = await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
-      [{ namespace: "create", locale: "zh_tw", key: "screen.create.count", english: "Count: %s" }],
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
       mods,
       [],
     );
@@ -99,7 +99,7 @@ describe("llm", () => {
 
     const result = await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
-      [{ namespace: "create", locale: "zh_tw", key: "screen.create.count", english: "Count: %s" }],
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
       mods,
       [],
     );
@@ -143,8 +143,13 @@ describe("llm", () => {
     const result = await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
       [
-        { namespace: "argentinasdelightreborn", locale: "zh_tw", key: "gui.argentinasdelightreborn.sawing_machine_gui.button_auto", english: "" },
-        { namespace: "create", locale: "zh_tw", key: "screen.create.count", english: "Count" },
+        job({
+          namespace: "argentinasdelightreborn",
+          targetLocale: "zh_tw",
+          key: "gui.argentinasdelightreborn.sawing_machine_gui.button_auto",
+          sourceText: "",
+        }),
+        job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count" }),
       ],
       mods,
       [],
@@ -152,7 +157,16 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.items).toEqual([{ id: validId, locale: "zh_tw", key: "screen.create.count", english: "Count" }]);
+    expect(payload.items).toEqual([
+      expect.objectContaining({
+        id: validId,
+        targetLocale: "zh_tw",
+        sourceLocale: "en_us",
+        key: "screen.create.count",
+        sourceText: "Count",
+        sourceValues: [{ locale: "en_us", source: "fallback", sourceLabel: "en_us source", text: "Count" }],
+      }),
+    ]);
     expect(result.patches[validId].value).toBe("數量");
     expect(result.patches[emptyId]).toBeUndefined();
     expect(result.warnings).toEqual([]);
@@ -162,7 +176,14 @@ describe("llm", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
-      [{ namespace: "argentinasdelightreborn", locale: "zh_tw", key: "gui.argentinasdelightreborn.sawing_machine_gui.button_auto", english: "  " }],
+      [
+        job({
+          namespace: "argentinasdelightreborn",
+          targetLocale: "zh_tw",
+          key: "gui.argentinasdelightreborn.sawing_machine_gui.button_auto",
+          sourceText: "  ",
+        }),
+      ],
       { argentinasdelightreborn: { en_us: { "gui.argentinasdelightreborn.sawing_machine_gui.button_auto": "  " } } },
       [],
     );
@@ -205,7 +226,7 @@ describe("llm", () => {
         systemPrompt: `${DEFAULT_LLM_SYSTEM_PROMPT} Use concise Traditional Chinese.`,
         userPrompt: "Prefer Minecraft Taiwan terminology.",
       },
-      [{ namespace: "create", locale: "zh_tw", key: "screen.create.count", english: "Count: %s" }],
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
       mods,
       [],
     );
@@ -218,9 +239,67 @@ describe("llm", () => {
     expect(JSON.parse(request.messages[1].content)).toMatchObject({
       promptVersion: "minecraft-mods-localizer-v1-custom",
       instructions: "Prefer Minecraft Taiwan terminology.",
-      items: [{ id, locale: "zh_tw", key: "screen.create.count", english: "Count: %s" }],
+      items: [
+        {
+          id,
+          targetLocale: "zh_tw",
+          sourceLocale: "en_us",
+          key: "screen.create.count",
+          sourceText: "Count: %s",
+          sourceValues: [{ locale: "en_us", source: "fallback", sourceLabel: "en_us source", text: "Count: %s" }],
+        },
+      ],
     });
     expect(result.patches[id].meta?.promptVersion).toBe("minecraft-mods-localizer-v1-custom");
+  });
+
+  it("sends every selected source value to the LLM payload", async () => {
+    const id = makeEntryId("create", "zh_tw", "screen.create.count");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  [id]: "數量: %s",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [
+        job({
+          targetLocale: "zh_tw",
+          key: "screen.create.count",
+          sourceLocale: "en_us",
+          sourceText: "Count: %s",
+          sourceReferenceMode: "all",
+          sourceValues: [
+            { locale: "en_us", source: "jar", sourceLabel: "en_us jar", value: "Count: %s" },
+            { locale: "es_ar", source: "jar", sourceLabel: "es_ar jar", value: "Cuenta: %s" },
+          ],
+        }),
+      ],
+      { create: { en_us: { "screen.create.count": "Count: %s" } } },
+      [],
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const payload = JSON.parse(request.messages[1].content);
+    expect(payload.items[0]).toMatchObject({
+      sourceReferenceMode: "all",
+      sourceValues: [
+        { locale: "en_us", source: "jar", sourceLabel: "en_us jar", text: "Count: %s" },
+        { locale: "es_ar", source: "jar", sourceLabel: "es_ar jar", text: "Cuenta: %s" },
+      ],
+    });
   });
 
   it("includes matching Phrase Mapping glossary entries in the request payload", async () => {
@@ -251,7 +330,7 @@ describe("llm", () => {
 
     await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
-      [{ namespace: "create", locale: "zh_tw", key: "block.create.oak_slab", english: "Oak Slab" }],
+      [job({ targetLocale: "zh_tw", key: "block.create.oak_slab", sourceText: "Oak Slab" })],
       mods,
       [],
       phraseMappingsWithInternalVanilla(effectivePhraseMappings()),
@@ -292,7 +371,7 @@ describe("llm", () => {
 
     await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
-      [{ namespace: "create", locale: "zh_cn", key: "block.create.engine", english: "Copper Engine" }],
+      [job({ targetLocale: "zh_cn", key: "block.create.engine", sourceText: "Copper Engine" })],
       mods,
       [],
       phraseMappingsWithInternalVanilla(
@@ -345,7 +424,7 @@ describe("llm", () => {
 
     await translateJobsWithLlm(
       { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
-      [{ namespace: "create", locale: "zh_cn", key: "block.create.engine", english: "Copper Machine" }],
+      [job({ targetLocale: "zh_cn", key: "block.create.engine", sourceText: "Copper Machine" })],
       mods,
       [],
       phraseMappingsWithInternalVanilla(
@@ -367,6 +446,38 @@ describe("llm", () => {
     expect(payload.phraseGlossary.map((mapping: { id: string }) => mapping.id)).not.toContain("custom.engine");
   });
 
+  it("does not send Chinese Phrase Mapping glossary entries for non-Chinese targets", async () => {
+    const id = makeEntryId("create", "fr_fr", "block.create.oak_slab");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  [id]: "Dalle de chêne",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
+      [job({ targetLocale: "fr_fr", key: "block.create.oak_slab", sourceText: "Oak Slab" })],
+      { create: { en_us: { "block.create.oak_slab": "Oak Slab" } } },
+      [],
+      phraseMappingsWithInternalVanilla(effectivePhraseMappings()),
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const payload = JSON.parse(request.messages[1].content);
+    expect(payload.phraseGlossary).toEqual([]);
+  });
+
   it("simulates translations in debug mode without calling an endpoint", async () => {
     const id = makeEntryId("create", "zh_tw", "screen.create.count");
     const fetchSpy = vi.spyOn(globalThis, "fetch");
@@ -380,7 +491,7 @@ describe("llm", () => {
 
     const result = await translateJobsWithLlm(
       { baseUrl: "", apiKey: "", model: "", debugMode: true },
-      [{ namespace: "create", locale: "zh_tw", key: "screen.create.count", english: "Count: %s" }],
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
       mods,
       [],
     );
@@ -412,3 +523,31 @@ describe("llm", () => {
     expect(project.patches[id]).toBe(second);
   });
 });
+
+function job({
+  namespace = "create",
+  targetLocale,
+  key,
+  sourceText,
+  sourceLocale = "en_us",
+  sourceValues,
+  sourceReferenceMode,
+}: {
+  namespace?: string;
+  targetLocale: string;
+  key: string;
+  sourceText: string;
+  sourceLocale?: string;
+  sourceValues?: LlmJob["sourceValues"];
+  sourceReferenceMode?: LlmJob["sourceReferenceMode"];
+}): LlmJob {
+  return {
+    namespace,
+    targetLocale,
+    key,
+    sourceLocale,
+    sourceText,
+    sourceValues,
+    sourceReferenceMode,
+  };
+}

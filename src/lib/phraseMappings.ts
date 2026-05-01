@@ -3,8 +3,8 @@ import vanillaEnUs from "../../minecraft/lang/en_us.json";
 import vanillaZhCn from "../../minecraft/lang/zh_cn.json";
 import vanillaZhHk from "../../minecraft/lang/zh_hk.json";
 import vanillaZhTw from "../../minecraft/lang/zh_tw.json";
-import type { PhraseMapping, PhraseMappingOverride, TargetLocale } from "./types";
-import { TARGET_LOCALES } from "./types";
+import { CHINESE_LOCALES } from "./locales";
+import type { ChineseLocale, PhraseMapping, PhraseMappingOverride } from "./types";
 
 export interface PhraseGlossaryEntry {
   id: string;
@@ -25,7 +25,7 @@ interface PhraseReferenceEntry {
   value: string;
 }
 
-const VANILLA_LOCALES: Record<"en_us" | TargetLocale, Record<string, string>> = {
+const VANILLA_LOCALES: Record<"en_us" | ChineseLocale, Record<string, string>> = {
   en_us: vanillaEnUs,
   zh_cn: vanillaZhCn,
   zh_tw: vanillaZhTw,
@@ -97,8 +97,8 @@ export function phraseMappingOverrideFromMapping(mapping: PhraseMapping): Phrase
 
 export function phraseDictionaryForConversion(
   mappings: readonly PhraseMapping[],
-  from: TargetLocale,
-  to: TargetLocale,
+  from: ChineseLocale,
+  to: ChineseLocale,
 ): string[][] {
   const cacheKey = `${from}->${to}`;
   const cached = phraseDictionaryCache.get(mappings)?.get(cacheKey);
@@ -192,7 +192,7 @@ export function isInternalVanillaPhraseMapping(id: string): boolean {
 function buildInternalVanillaPhraseMappings(): PhraseMapping[] {
   return Object.entries(VANILLA_LOCALES.en_us)
     .filter(([key, value]) => typeof value === "string" && value.trim() && !key.startsWith("advancements."))
-    .filter(([key]) => TARGET_LOCALES.every((locale) => typeof VANILLA_LOCALES[locale][key] === "string"))
+    .filter(([key]) => CHINESE_LOCALES.every((locale) => typeof VANILLA_LOCALES[locale][key] === "string"))
     .map(([key, value]) => ({
       id: key,
       enabled: true,
@@ -239,7 +239,7 @@ function normalizePhraseMappingOverride(value: unknown): PhraseMappingOverride |
   if (Array.isArray(input.en_us)) {
     output.en_us = uniqueStrings(input.en_us.map((term) => String(term).trim()).filter(Boolean));
   }
-  for (const locale of TARGET_LOCALES) {
+  for (const locale of CHINESE_LOCALES) {
     if (Array.isArray(input[locale])) {
       output[locale] = uniqueStrings(input[locale].map((term) => String(term).trim()).filter(Boolean)) as never;
     }

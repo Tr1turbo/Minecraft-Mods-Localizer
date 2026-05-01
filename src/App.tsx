@@ -14,6 +14,7 @@ import {
   Search,
   Settings,
   Square,
+  TriangleAlert,
   Trash2,
   Upload,
   Wand2,
@@ -49,6 +50,8 @@ import {
   createEmptyProjectPatch,
   createPatchValue,
   normalizeProjectPatch,
+  resolveLlmReferenceValues,
+  resolveReferenceValuesForKey,
   revertManualKey,
   revertManualNamespace,
 } from "./lib/patches";
@@ -59,15 +62,16 @@ import type {
   CandidateValue,
   EntryId,
   LangpackProjectPatch,
+  LocaleCode,
   ModScanResult,
   PatchValue,
   PhraseMapping,
+  ReferenceValue,
   ResolvedEntry,
   SourceKind,
   SourcePackScanResult,
-  TargetLocale,
 } from "./lib/types";
-import { TARGET_LOCALES } from "./lib/types";
+import { BUNDLED_LOCALE_CODES, CHINESE_LOCALES, isChineseLocale, isValidLocaleCode, normalizeLocaleCode, uniqueLocaleCodes } from "./lib/locales";
 import {
   listLlmModels,
   mergeLlmPatches,
@@ -77,6 +81,7 @@ import {
 } from "./lib/llm";
 import {
   CONVERT_SOURCE_ORDER,
+  LLM_REFERENCE_MODES,
   SOURCE_LABEL_ORDER,
   SOURCE_TRANSLATE_TARGET_ORDER,
   type AppSettings,
@@ -146,10 +151,11 @@ interface BrowserDraftState {
   modScan: ModScanResult;
   sourcePacks: SourcePackScanResult[];
   project: LangpackProjectPatch;
-  activeLocale: TargetLocale;
+  activeLocale: LocaleCode;
   activePage: PageId;
   settings: AppSettings;
   referenceLocale: string;
+  referenceFallbackLocale: string;
   selectedKey: string;
   query: string;
   manualDraft: string;
@@ -168,11 +174,12 @@ function App() {
   const [modFiles, setModFiles] = useState<File[]>([]);
   const [sourcePacks, setSourcePacks] = useState<SourcePackScanResult[]>([]);
   const [project, setProject] = useState<LangpackProjectPatch>(() => createEmptyProjectPatch());
-  const [activeLocale, setActiveLocale] = useState<TargetLocale>("zh_tw");
+  const [activeLocale, setActiveLocale] = useState<LocaleCode>("");
   const [activePage, setActivePage] = useState<PageId>("project");
   const [settings, setSettings] = useState<AppSettings>(() => createDefaultAppSettings());
   const [resizingInspector, setResizingInspector] = useState(false);
   const [referenceLocale, setReferenceLocale] = useState("en_us");
+  const [referenceFallbackLocale, setReferenceFallbackLocale] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [query, setQuery] = useState("");
   const [manualDraft, setManualDraft] = useState("");
@@ -196,8 +203,25 @@ function App() {
   const phraseMappings = useMemo(() => effectivePhraseMappings(project.phraseMappings), [project.phraseMappings]);
   const runtimePhraseMappings = useMemo(() => phraseMappingsWithInternalVanilla(phraseMappings), [phraseMappings]);
   const rows = useMemo(
-    () => buildCatalog(modScan.translations, sourcePacks, project, settings.fallbackChains, runtimePhraseMappings, settings.convertSources),
-    [modScan.translations, sourcePacks, project, settings.fallbackChains, runtimePhraseMappings, settings.convertSources],
+    () =>
+      buildCatalog(
+        modScan.translations,
+        sourcePacks,
+        project,
+        settings.fallbackChains,
+        runtimePhraseMappings,
+        settings.convertSources,
+        settings.targetLocales,
+      ),
+    [
+      modScan.translations,
+      sourcePacks,
+      project,
+      settings.fallbackChains,
+      runtimePhraseMappings,
+      settings.convertSources,
+      settings.targetLocales,
+    ],
   );
   const namespaces = useMemo(() => Array.from(new Set(rows.map((row) => row.namespace))).sort(), [rows]);
   const activeNamespace = activePage.startsWith("namespace:") ? activePage.slice("namespace:".length) : "";
@@ -206,11 +230,12 @@ function App() {
       rows.filter((row) => {
         const namespaceMatches = activeNamespace ? row.namespace === activeNamespace : false;
         const normalizedQuery = query.trim().toLowerCase();
+        const activeEntry = activeLocale ? row.entries[activeLocale] : undefined;
         const queryMatches =
           !normalizedQuery ||
           row.key.toLowerCase().includes(normalizedQuery) ||
-          row.english.toLowerCase().includes(normalizedQuery) ||
-          row.entries[activeLocale].final.value.toLowerCase().includes(normalizedQuery);
+          (activeEntry?.sourceValue ?? row.sourceValue).toLowerCase().includes(normalizedQuery) ||
+          (activeEntry?.final.value ?? "").toLowerCase().includes(normalizedQuery);
         return namespaceMatches && queryMatches;
       }),
     [activeLocale, activeNamespace, query, rows],
@@ -221,16 +246,16 @@ function App() {
   );
   const tableItems = useMemo(() => groupTableRows(filteredRows), [filteredRows]);
   const namespaceMissingCount = useMemo(
-    () => namespaceRows.filter((row) => rowNeedsTranslation(row, activeLocale, settings.translateSourceTargets)).length,
-    [activeLocale, namespaceRows, settings.translateSourceTargets],
+    () => translationJobsForRows(namespaceRows, activeLocale, settings, modScan.translations, sourcePacks, project).length,
+    [activeLocale, modScan.translations, namespaceRows, project, settings, sourcePacks],
   );
   const allMissingCount = useMemo(
-    () => rows.filter((row) => rowNeedsTranslation(row, activeLocale, settings.translateSourceTargets)).length,
-    [activeLocale, rows, settings.translateSourceTargets],
+    () => translationJobsForRows(rows, activeLocale, settings, modScan.translations, sourcePacks, project).length,
+    [activeLocale, modScan.translations, project, rows, settings, sourcePacks],
   );
   const selectedRow = filteredRows.find((row) => rowId(row) === selectedKey) ?? filteredRows[0];
-  const selectedEntry = selectedRow?.entries[activeLocale];
-  const manualWarnings = selectedEntry ? placeholderWarnings(selectedEntry.english, manualDraft) : [];
+  const selectedEntry = activeLocale ? selectedRow?.entries[activeLocale] : undefined;
+  const manualWarnings = selectedEntry ? placeholderWarnings(selectedEntry.sourceValue, manualDraft) : [];
   const manualDiffSegments = useMemo(
     () => diffTextAgainstBase(selectedEntry?.base.value ?? "", manualDraft),
     [manualDraft, selectedEntry?.base.value],
@@ -238,13 +263,22 @@ function App() {
   const hasManualPatch = isManualEntryPatch(selectedEntry);
   const selectedLlmCandidates = selectedEntry ? (project.llmCandidates?.[selectedEntry.id] ?? []) : [];
   const hasUnsavedPatchEdit = Boolean(selectedEntry && manualDraft !== (selectedEntry.patch?.value ?? selectedEntry.final.value));
-  const selectedReferenceValue = selectedRow ? referenceValueForRow(selectedRow, referenceLocale) : "";
+  const selectedReferenceValues = useMemo(
+    () =>
+      selectedRow
+        ? resolveReferenceValuesForKey(modScan.translations, sourcePacks, project, selectedRow.namespace, selectedRow.key)
+        : [],
+    [modScan.translations, project, selectedRow, sourcePacks],
+  );
+  const selectedReference = resolveVisibleReferenceValue(selectedReferenceValues, referenceLocale, referenceFallbackLocale);
+  const selectedReferenceValue = selectedReference?.value ?? "";
   const selectedPhraseMatches = useMemo(
     () =>
       selectedRow
+      && isChineseLocale(activeLocale)
         ? selectPhraseMappingsForReference({ key: selectedRow.key, value: selectedReferenceValue }, runtimePhraseMappings)
         : [],
-    [runtimePhraseMappings, selectedReferenceValue, selectedRow],
+    [activeLocale, runtimePhraseMappings, selectedReferenceValue, selectedRow],
   );
   const stats = useMemo(() => buildStats(rows, activeLocale, project), [activeLocale, project, rows]);
   const draftState = useMemo<BrowserDraftState>(
@@ -257,6 +291,7 @@ function App() {
       activePage,
       settings,
       referenceLocale,
+      referenceFallbackLocale,
       selectedKey,
       query,
       manualDraft,
@@ -275,6 +310,7 @@ function App() {
       modScan,
       project,
       query,
+      referenceFallbackLocale,
       referenceLocale,
       selectedEntry?.id,
       selectedKey,
@@ -311,14 +347,30 @@ function App() {
         setDeploymentDefaults(defaults);
         setSourceLabels(defaults.sourceLabels);
         if (draft?.data.schemaVersion === BROWSER_DRAFT_SCHEMA_VERSION) {
+          const restoredProject = normalizeProjectDraft(draft.data.project);
           restoreDraftState(draft.data, restoredManualDraftRef);
           setModScan(draft.data.modScan ?? EMPTY_SCAN);
           setSourcePacks(Array.isArray(draft.data.sourcePacks) ? draft.data.sourcePacks : []);
-          setProject(normalizeProjectDraft(draft.data.project));
-          setActiveLocale(isTargetLocaleValue(draft.data.activeLocale) ? draft.data.activeLocale : "zh_tw");
+          setProject(restoredProject);
+          setActiveLocale(isLocaleCodeValue(draft.data.activeLocale) ? draft.data.activeLocale : "");
           setActivePage(isPageId(draft.data.activePage) ? draft.data.activePage : "project");
           nextSettings = mergeAppSettings(draft.data.settings, defaults.settings);
-          setReferenceLocale(typeof draft.data.referenceLocale === "string" ? draft.data.referenceLocale : "en_us");
+          if (nextSettings.targetLocales.length === 0 && restoredProject.locales.length > 0) {
+            nextSettings = {
+              ...nextSettings,
+              targetLocales: [...restoredProject.locales],
+              fallbackChains: { ...restoredProject.fallbackChains },
+            };
+          }
+          const restoredReferenceLocale = typeof draft.data.referenceLocale === "string" ? draft.data.referenceLocale : "en_us";
+          const restoredFallbackLocale =
+            typeof draft.data.referenceFallbackLocale === "string" && nextSettings.targetLocales.includes(draft.data.referenceFallbackLocale)
+              ? draft.data.referenceFallbackLocale
+              : nextSettings.targetLocales.includes(restoredReferenceLocale)
+                ? restoredReferenceLocale
+                : "";
+          setReferenceLocale(restoredReferenceLocale);
+          setReferenceFallbackLocale(restoredFallbackLocale);
           setSelectedKey(typeof draft.data.selectedKey === "string" ? draft.data.selectedKey : "");
           setQuery(typeof draft.data.query === "string" ? draft.data.query : "");
           setInlineDrafts(isEntryDraftRecord(draft.data.inlineDrafts) ? draft.data.inlineDrafts : {});
@@ -421,6 +473,30 @@ function App() {
   }, [activeNamespace, activePage, namespaces]);
 
   useEffect(() => {
+    if (settings.targetLocales.length === 0) {
+      if (activeLocale) {
+        setActiveLocale("");
+      }
+      return;
+    }
+    if (!settings.targetLocales.includes(activeLocale)) {
+      setActiveLocale(settings.targetLocales[0]);
+    }
+  }, [activeLocale, settings.targetLocales]);
+
+  useEffect(() => {
+    if (settings.targetLocales.length === 0) {
+      if (referenceFallbackLocale) {
+        setReferenceFallbackLocale("");
+      }
+      return;
+    }
+    if (!settings.targetLocales.includes(referenceFallbackLocale)) {
+      setReferenceFallbackLocale(activeLocale && settings.targetLocales.includes(activeLocale) ? activeLocale : settings.targetLocales[0]);
+    }
+  }, [activeLocale, referenceFallbackLocale, settings.targetLocales]);
+
+  useEffect(() => {
     if (!activePage.startsWith("namespace:")) {
       setSelectedKey("");
     }
@@ -481,7 +557,13 @@ function App() {
       return;
     }
     await runBusy("Loaded project patch.", async () => {
-      setProject(await readProjectPatchFile(file));
+      const loadedProject = await readProjectPatchFile(file);
+      setProject(loadedProject);
+      setSettings((current) => ({
+        ...current,
+        targetLocales: [...loadedProject.locales],
+        fallbackChains: { ...loadedProject.fallbackChains },
+      }));
     });
   }
 
@@ -600,7 +682,7 @@ function App() {
       },
     }));
     setInlineDrafts((current) => removeDraft(current, entry.id));
-    const warnings = placeholderWarnings(entry.english, value);
+    const warnings = placeholderWarnings(entry.sourceValue, value);
     setStatus({
       tone: warnings.length ? "warn" : "ok",
       text: warnings.length ? `Manual patch saved with warning: ${warnings[0]}` : options.quiet ? "Inline edit saved." : "Manual patch saved.",
@@ -617,28 +699,23 @@ function App() {
   }
 
   async function translateSelected() {
-    if (!selectedEntry || !selectedEntry.hasEnglish || !hasLlmSourceText(selectedEntry.english)) {
-      setStatus({ tone: "warn", text: "No selected en_us source value." });
+    const job = selectedEntry ? llmJobForEntry(selectedEntry, settings, modScan.translations, sourcePacks, project) : undefined;
+    if (!job) {
+      setStatus({ tone: "warn", text: "No selected source value." });
       return;
     }
-    await translateJobs(
-      [
-        {
-          namespace: selectedEntry.namespace,
-          locale: selectedEntry.locale,
-          key: selectedEntry.key,
-          english: selectedEntry.english,
-        },
-      ],
-      "Selected key",
-    );
+    await translateJobs([job], "Selected key");
   }
 
   async function translateNamespace() {
     if (!activeNamespace) {
       return;
     }
-    const jobs = translationJobsForRows(namespaceRows, activeLocale, settings.translateSourceTargets);
+    if (!activeLocale) {
+      setStatus({ tone: "warn", text: "Add a target locale before translating." });
+      return;
+    }
+    const jobs = translationJobsForRows(namespaceRows, activeLocale, settings, modScan.translations, sourcePacks, project);
     if (jobs.length === 0) {
       setStatus({ tone: "warn", text: "No untranslated keys on this page." });
       return;
@@ -647,7 +724,11 @@ function App() {
   }
 
   async function translateAll() {
-    const jobs = translationJobsForRows(rows, activeLocale, settings.translateSourceTargets);
+    if (!activeLocale) {
+      setStatus({ tone: "warn", text: "Add a target locale before translating." });
+      return;
+    }
+    const jobs = translationJobsForRows(rows, activeLocale, settings, modScan.translations, sourcePacks, project);
     if (jobs.length === 0) {
       setStatus({ tone: "warn", text: "No untranslated keys left." });
       return;
@@ -757,6 +838,8 @@ function App() {
           try {
             result = await translateJobsWithLlm(llmSettings, chunk, modScan.translations, sourcePacks, runtimePhraseMappings, {
               signal: abortController.signal,
+              fallbackChains: settings.fallbackChains,
+              convertSources: settings.convertSources,
             });
           } finally {
             control.abortControllers.delete(abortController);
@@ -819,6 +902,10 @@ function App() {
   async function exportProjectPatch() {
     const exportProject: LangpackProjectPatch = {
       ...project,
+      schemaVersion: 2,
+      locales: [...settings.targetLocales],
+      fallbackChains: { ...settings.fallbackChains },
+      sourceLocalePriority: [],
       llmCandidates: project.llmCandidates ?? {},
       phraseMappings: project.phraseMappings ?? {},
       modFingerprints: modScan.fingerprints,
@@ -830,13 +917,13 @@ function App() {
 
   async function exportResourcePack() {
     if (rows.length === 0) {
-      setStatus({ tone: "warn", text: "Load mod jars before exporting." });
+      setStatus({ tone: "warn", text: settings.targetLocales.length === 0 ? "Add a target locale before exporting." : "Load mod jars before exporting." });
       return;
     }
     await runBusy("Resource pack zip exported.", async () => {
-      const blob = await createResourcePackZip(rows, TARGET_LOCALES, {
+      const blob = await createResourcePackZip(rows, settings.targetLocales, {
         packFormat: settings.packFormat,
-        description: `${settings.description}\nLocales: ${TARGET_LOCALES.join(", ")}`,
+        description: `${settings.description}\nLocales: ${settings.targetLocales.join(", ")}`,
         sourcePacks,
         sourcePackMode: settings.sourcePackMode,
         skipSources: settings.exportSkipSources,
@@ -847,12 +934,12 @@ function App() {
 
   async function exportPatchedJars() {
     if (modFiles.length === 0 || rows.length === 0) {
-      setStatus({ tone: "warn", text: "Load mod jars before exporting patched jars." });
+      setStatus({ tone: "warn", text: settings.targetLocales.length === 0 ? "Add a target locale before exporting patched jars." : "Load mod jars before exporting patched jars." });
       return;
     }
     let summary = "";
     await runBusy("Patched jar export created.", async () => {
-      const result = await createPatchedJarDownload(modFiles, rows, TARGET_LOCALES, {
+      const result = await createPatchedJarDownload(modFiles, rows, settings.targetLocales, {
         skipSources: settings.exportSkipSources,
       });
       if (result.jars.length === 0) {
@@ -891,6 +978,7 @@ function App() {
         manualDraft: "",
         manualDraftEntryId: "",
         inlineDrafts: {},
+        referenceFallbackLocale: "",
       };
       await writeBrowserDraftSnapshot(nextDraftState);
       lastSavedModFileKeyRef.current = "";
@@ -901,6 +989,7 @@ function App() {
       setSelectedKey("");
       setManualDraft("");
       setInlineDrafts({});
+      setReferenceFallbackLocale("");
       setStatus({ tone: "ok", text: "Loaded jars cleared from this session and browser storage." });
     } catch (error) {
       setStatus({ tone: "error", text: errorMessage(error) });
@@ -948,6 +1037,17 @@ function App() {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     setResizingInspector(false);
+  }
+
+  function updateReferenceLocale(locale: LocaleCode) {
+    const normalizedLocale = normalizeLocaleCode(locale);
+    if (!normalizedLocale) {
+      return;
+    }
+    setReferenceLocale(normalizedLocale);
+    if (settings.targetLocales.includes(normalizedLocale)) {
+      setReferenceFallbackLocale(normalizedLocale);
+    }
   }
 
   const headerStatusText = translationProgress
@@ -1006,7 +1106,7 @@ function App() {
           <section className="namespaceNav">
             <div className="navSectionTitle">Namespaces</div>
             {namespaces.length === 0 ? (
-              <div className="emptyState">Load mod jars</div>
+              <div className="emptyState">{modScan.fingerprints.length && settings.targetLocales.length === 0 ? "Add target locale" : "Load mod jars"}</div>
             ) : (
               namespaces.map((namespace) => (
                 <button
@@ -1099,7 +1199,7 @@ function App() {
               {llmWarnings.length ? <LlmWarningsPanel warnings={llmWarnings} clearWarnings={() => setLlmWarnings([])} /> : null}
               <div className="tableToolbar">
                 <div className="localeTabs" role="tablist" aria-label="Locales">
-                  {TARGET_LOCALES.map((locale) => (
+                  {settings.targetLocales.map((locale) => (
                     <button
                       type="button"
                       key={locale}
@@ -1135,7 +1235,11 @@ function App() {
                         );
                       }
                       const row = item.row;
-                      const entry = row.entries[activeLocale];
+                      const entry = activeLocale ? row.entries[activeLocale] : undefined;
+                      if (!entry) {
+                        return null;
+                      }
+                      const hasEnUsValue = rowHasLocaleValue(row, "en_us", modScan.translations, sourcePacks);
                       return (
                         <div
                           className={`entryRow ${selectedRow && rowId(selectedRow) === rowId(row) ? "selected" : ""}`}
@@ -1147,6 +1251,11 @@ function App() {
                             <button type="button" className="keyButton" title={row.key} onClick={() => setSelectedKey(rowId(row))}>
                               {item.displayKey}
                             </button>
+                            {!hasEnUsValue ? (
+                              <span className="keyWarningIcon" title="No en_us value" role="img" aria-label="No en_us value">
+                                <TriangleAlert size={14} />
+                              </span>
+                            ) : null}
                           </span>
                           <SourceBadge source={entry.final.source} />
                           <InlineValueEditor
@@ -1198,15 +1307,16 @@ function App() {
                 <>
                   <section className="valueStack">
                     <ReferenceValueBlock
-                      selectedRow={selectedRow}
-                      referenceLocale={referenceLocale}
-                      setReferenceLocale={setReferenceLocale}
+                      referenceLocale={selectedReference?.locale ?? ""}
+                      availableReferenceValues={selectedReferenceValues}
+                      onReferenceLocaleChange={updateReferenceLocale}
+                      hasEnUsValue={selectedReferenceValues.some((reference) => reference.locale === "en_us")}
                     />
                     <ValueBlock title="Base value" source={selectedEntry.base.source} value={selectedEntry.base.value} label={selectedEntry.base.sourceLabel} />
                   </section>
 
                   {selectedPhraseMatches.length ? (
-                    <PhraseMatchesPanel matches={selectedPhraseMatches} activeLocale={activeLocale} referenceLocale={referenceLocale} />
+                    <PhraseMatchesPanel matches={selectedPhraseMatches} activeLocale={activeLocale} referenceLocale={selectedReference?.locale ?? referenceLocale} />
                   ) : null}
 
                   {selectedLlmCandidates.length ? (
@@ -1349,15 +1459,17 @@ function LlmCandidatesPanel({
 function FallbackChainEditor({
   locale,
   chain,
+  availableLocales,
   setChain,
 }: {
-  locale: TargetLocale;
+  locale: LocaleCode;
   chain: string[];
+  availableLocales: readonly LocaleCode[];
   setChain: (chain: string[]) => void;
 }) {
   const normalized = normalizeFallbackChain(locale, chain);
   const movable = normalized.filter((fallbackLocale) => fallbackLocale !== "en_us");
-  const available = TARGET_LOCALES.filter((fallbackLocale) => fallbackLocale !== locale && !movable.includes(fallbackLocale));
+  const available = availableLocales.filter((fallbackLocale) => fallbackLocale !== locale && fallbackLocale !== "en_us" && !movable.includes(fallbackLocale));
 
   function move(index: number, delta: number) {
     const target = index + delta;
@@ -1366,11 +1478,11 @@ function FallbackChainEditor({
     }
     const next = [...movable];
     [next[index], next[target]] = [next[target], next[index]];
-    setChain([...next, "en_us"]);
+    setChain(next);
   }
 
   function remove(index: number) {
-    setChain([...movable.slice(0, index), ...movable.slice(index + 1), "en_us"]);
+    setChain([...movable.slice(0, index), ...movable.slice(index + 1)]);
   }
 
   return (
@@ -1397,15 +1509,17 @@ function FallbackChainEditor({
             </button>
           </div>
         ))}
-        <div className="fallbackChip locked">
-          <span>en_us</span>
-        </div>
+        {locale !== "en_us" ? (
+          <div className="fallbackChip locked">
+            <span>en_us</span>
+          </div>
+        ) : null}
         <select
           className="fallbackAdd"
           value=""
           onChange={(event) => {
             if (event.target.value) {
-              setChain([...movable, event.target.value, "en_us"]);
+              setChain([...movable, event.target.value]);
             }
           }}
         >
@@ -1450,8 +1564,8 @@ function ProjectPage({
   sourceCount: number;
   settings: AppSettings;
   setSettings: Dispatch<SetStateAction<AppSettings>>;
-  activeLocale: TargetLocale;
-  setActiveLocale: Dispatch<SetStateAction<TargetLocale>>;
+  activeLocale: LocaleCode;
+  setActiveLocale: Dispatch<SetStateAction<LocaleCode>>;
   translating: boolean;
   translationProgress: TranslationProgress | null;
   llmWarnings: string[];
@@ -1469,7 +1583,7 @@ function ProjectPage({
   const namespaceCount = new Set(rows.map((row) => row.namespace)).size;
   const sourceTargetCounts = useMemo(() => countTranslationTargetsBySource(rows, activeLocale), [activeLocale, rows]);
   const missingSourceRows = useMemo(
-    () => rows.filter((row) => row.entries[activeLocale].final.source === "missing").length,
+    () => (activeLocale ? rows.filter((row) => row.entries[activeLocale]?.final.source === "missing").length : 0),
     [activeLocale, rows],
   );
   return (
@@ -1539,7 +1653,8 @@ function ProjectPage({
         </div>
         <div className="projectActionPanel">
           <div className="localeTabs" role="tablist" aria-label="Project action locale">
-            {TARGET_LOCALES.map((locale) => (
+            {settings.targetLocales.length === 0 ? <span className="targetHint">Add a target locale in Settings.</span> : null}
+            {settings.targetLocales.map((locale) => (
               <button
                 type="button"
                 key={locale}
@@ -1755,6 +1870,46 @@ function LlmWarningsPanel({ warnings, clearWarnings }: { warnings: string[]; cle
   );
 }
 
+function LocaleOrderList({
+  locales,
+  emptyText,
+  moveLocale,
+  removeLocale,
+}: {
+  locales: readonly LocaleCode[];
+  emptyText: string;
+  moveLocale: (index: number, delta: number) => void;
+  removeLocale: (locale: LocaleCode) => void;
+}) {
+  if (locales.length === 0) {
+    return <div className="emptyState">{emptyText}</div>;
+  }
+  return (
+    <div className="fallbackList localeOrderList">
+      {locales.map((locale, index) => (
+        <div className="fallbackChip" key={locale}>
+          <span>{locale}</span>
+          <button type="button" className="miniIconButton" onClick={() => moveLocale(index, -1)} disabled={index === 0} aria-label={`Move ${locale} up`}>
+            <ArrowUp size={13} />
+          </button>
+          <button
+            type="button"
+            className="miniIconButton"
+            onClick={() => moveLocale(index, 1)}
+            disabled={index === locales.length - 1}
+            aria-label={`Move ${locale} down`}
+          >
+            <ArrowDown size={13} />
+          </button>
+          <button type="button" className="miniIconButton danger" onClick={() => removeLocale(locale)} aria-label={`Remove ${locale}`}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SettingsPage({
   settings,
   setSettings,
@@ -1790,6 +1945,7 @@ function SettingsPage({
 }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [phraseQuery, setPhraseQuery] = useState("");
+  const [targetLocaleDraft, setTargetLocaleDraft] = useState("");
   const sourceLabels = useContext(SourceLabelContext);
   const filteredPhraseMappings = useMemo(() => {
     const normalizedQuery = phraseQuery.trim().toLowerCase();
@@ -1906,12 +2062,90 @@ function SettingsPage({
     setStatus({ tone: "ok", text: "Phrase Mapping overrides exported." });
   }
 
+  function addTargetLocale(locale: string) {
+    const normalized = normalizeLocaleCode(locale);
+    if (!isValidLocaleCode(normalized)) {
+      setStatus({ tone: "warn", text: "Enter a valid Minecraft locale code." });
+      return;
+    }
+    setSettings((current) => {
+      if (current.targetLocales.includes(normalized)) {
+        return current;
+      }
+      return {
+        ...current,
+        targetLocales: [...current.targetLocales, normalized],
+        fallbackChains: {
+          ...current.fallbackChains,
+          [normalized]: current.fallbackChains[normalized] ?? [],
+        },
+      };
+    });
+    setTargetLocaleDraft("");
+  }
+
+  function removeTargetLocale(locale: LocaleCode) {
+    setSettings((current) => {
+      const fallbackChains = { ...current.fallbackChains };
+      delete fallbackChains[locale];
+      return {
+        ...current,
+        targetLocales: current.targetLocales.filter((item) => item !== locale),
+        fallbackChains,
+      };
+    });
+  }
+
+  function moveTargetLocale(index: number, delta: number) {
+    setSettings((current) => ({
+      ...current,
+      targetLocales: moveListItem(current.targetLocales, index, delta),
+    }));
+  }
+
+  const targetSuggestions = BUNDLED_LOCALE_CODES.filter((locale) => !settings.targetLocales.includes(locale));
+  const fallbackSuggestions = uniqueLocaleCodes([...settings.targetLocales, ...BUNDLED_LOCALE_CODES]);
+
   return (
     <section className="pagePane">
       <div className="pageTitle">
         <h2>Settings</h2>
         {translating ? <Loader2 size={16} className="spin" /> : null}
       </div>
+      <section className="panel settingsPanel">
+        <div className="panelHeader">
+          <h2>Target locales</h2>
+          <span className="panelNote">{settings.targetLocales.length.toLocaleString()} selected</span>
+        </div>
+        <div className="localeManageControls">
+          <select
+            value=""
+            onChange={(event) => {
+              if (event.target.value) {
+                addTargetLocale(event.target.value);
+              }
+            }}
+          >
+            <option value="">Add bundled locale</option>
+            {targetSuggestions.map((locale) => (
+              <option key={locale} value={locale}>
+                {locale}
+              </option>
+            ))}
+          </select>
+          <input value={targetLocaleDraft} onChange={(event) => setTargetLocaleDraft(event.target.value)} placeholder="custom code" />
+          <button type="button" onClick={() => addTargetLocale(targetLocaleDraft)}>
+            <Check size={16} />
+            Add
+          </button>
+        </div>
+        <LocaleOrderList
+          locales={settings.targetLocales}
+          emptyText="No target locales"
+          moveLocale={moveTargetLocale}
+          removeLocale={removeTargetLocale}
+        />
+      </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
           <h2>Editor</h2>
@@ -1941,11 +2175,13 @@ function SettingsPage({
         <div className="panelHeader">
           <h2>Locale fallback</h2>
         </div>
-        {TARGET_LOCALES.map((locale) => (
+        {settings.targetLocales.length === 0 ? <div className="emptyState">No target locales</div> : null}
+        {settings.targetLocales.map((locale) => (
           <FallbackChainEditor
             key={locale}
             locale={locale}
-            chain={settings.fallbackChains[locale]}
+            chain={settings.fallbackChains[locale] ?? []}
+            availableLocales={fallbackSuggestions}
             setChain={(chain) =>
               setSettings((current) => ({
                 ...current,
@@ -1989,6 +2225,25 @@ function SettingsPage({
             ))}
           </div>
         </div>
+        <label>
+          LLM source values
+          <select
+            value={settings.llmReferenceMode}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                llmReferenceMode: event.target.value as AppSettings["llmReferenceMode"],
+              }))
+            }
+          >
+            {LLM_REFERENCE_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {llmReferenceModeLabel(mode)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="targetHint">Starts from the selected source mode, then falls back to later modes when that source is unavailable.</div>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
@@ -2091,7 +2346,7 @@ function SettingsPage({
                       onChange={(event) => updatePhraseMappingField(mapping, "en_us", splitPhraseTerms(event.target.value))}
                     />
                   </label>
-                  {TARGET_LOCALES.map((locale) => (
+                  {CHINESE_LOCALES.map((locale) => (
                     <label key={locale}>
                       {locale}
                       <input
@@ -2377,30 +2632,37 @@ function ValueBlock({ title, source, label, value }: { title: string; source: Ca
 }
 
 function ReferenceValueBlock({
-  selectedRow,
   referenceLocale,
-  setReferenceLocale,
+  availableReferenceValues,
+  onReferenceLocaleChange,
+  hasEnUsValue,
 }: {
-  selectedRow: CatalogRow;
-  referenceLocale: string;
-  setReferenceLocale: Dispatch<SetStateAction<string>>;
+  referenceLocale: LocaleCode;
+  availableReferenceValues: readonly ReferenceValue[];
+  onReferenceLocaleChange: (locale: LocaleCode) => void;
+  hasEnUsValue: boolean;
 }) {
-  const options = ["en_us", ...TARGET_LOCALES];
-  const currentLocale = options.includes(referenceLocale) ? referenceLocale : "en_us";
-  const targetEntry = currentLocale === "en_us" ? undefined : selectedRow.entries[currentLocale as TargetLocale];
-  const source = currentLocale === "en_us" && !selectedRow.hasEnglish ? "missing" : (targetEntry?.final.source ?? "jar");
-  const label = currentLocale === "en_us" ? (selectedRow.hasEnglish ? "Mod jar" : "Missing source") : (targetEntry?.final.sourceLabel ?? currentLocale);
-  const value = currentLocale === "en_us" ? selectedRow.english : targetEntry?.final.value ?? "";
+  const referenceByLocale = new Map(availableReferenceValues.map((reference) => [reference.locale, reference]));
+  const currentReference = referenceByLocale.get(referenceLocale);
+  const source = currentReference?.source ?? "missing";
+  const label = currentReference?.sourceLabel ?? "No reference";
+  const value = currentReference?.value ?? "";
 
   return (
     <section className="valueBlock">
       <div className="valueBlockHeader">
         <label className="referenceSelectLabel">
           Reference
-          <select value={currentLocale} onChange={(event) => setReferenceLocale(event.target.value)}>
-            {options.map((locale) => (
-              <option key={locale} value={locale}>
-                {locale}
+          {!hasEnUsValue ? (
+            <span className="referenceWarningIcon" title="No en_us value" role="img" aria-label="No en_us value">
+              <TriangleAlert size={14} />
+            </span>
+          ) : null}
+          <select value={currentReference?.locale ?? ""} disabled={availableReferenceValues.length === 0} onChange={(event) => onReferenceLocaleChange(event.target.value)}>
+            {availableReferenceValues.length === 0 ? <option value="">No reference</option> : null}
+            {availableReferenceValues.map((reference) => (
+              <option key={reference.locale} value={reference.locale}>
+                {reference.locale}
               </option>
             ))}
           </select>
@@ -2420,9 +2682,10 @@ function PhraseMatchesPanel({
   referenceLocale,
 }: {
   matches: PhraseMapping[];
-  activeLocale: TargetLocale;
+  activeLocale: LocaleCode;
   referenceLocale: string;
 }) {
+  const targetTermsLocale = isChineseLocale(activeLocale) ? activeLocale : undefined;
   return (
     <section className="phraseMatchesPanel">
       <div className="panelHeader">
@@ -2443,7 +2706,7 @@ function PhraseMatchesPanel({
               </span>
               <span>
                 <b>{activeLocale}</b>
-                {joinPhraseTerms(mapping[activeLocale])}
+                {targetTermsLocale ? joinPhraseTerms(mapping[targetTermsLocale]) : "No Chinese glossary terms"}
               </span>
             </div>
           </article>
@@ -2466,31 +2729,101 @@ function rowId(row: CatalogRow): string {
   return `${row.namespace}\u0000${row.key}`;
 }
 
-function referenceValueForRow(row: CatalogRow, referenceLocale: string): string {
-  if (referenceLocale === "en_us") {
-    return row.english;
+function rowHasLocaleValue(row: CatalogRow, locale: LocaleCode, modTranslations: ModScanResult["translations"], sourcePacks: SourcePackScanResult[]): boolean {
+  if (modTranslations[row.namespace]?.[locale]?.[row.key] !== undefined) {
+    return true;
   }
-  if ((TARGET_LOCALES as readonly string[]).includes(referenceLocale)) {
-    return row.entries[referenceLocale as TargetLocale].final.value;
-  }
-  return row.english;
+  return sourcePacks.some((pack) => pack.translations[row.namespace]?.[locale]?.[row.key] !== undefined);
 }
 
-function translationJobsForRows(rows: CatalogRow[], locale: TargetLocale, sourceTargets: Record<SourceKind, boolean>): LlmJob[] {
-  return rows.filter((row) => rowNeedsTranslation(row, locale, sourceTargets)).map((row) => ({
-    namespace: row.namespace,
-    locale,
-    key: row.key,
-    english: row.english,
-  }));
+function resolveVisibleReferenceValue(
+  references: readonly ReferenceValue[],
+  globalLocale: LocaleCode,
+  fallbackLocale: LocaleCode,
+): ReferenceValue | undefined {
+  const referenceByLocale = new Map(references.map((reference) => [reference.locale, reference]));
+  for (const locale of uniqueLocaleCodes([globalLocale, fallbackLocale, "en_us"])) {
+    const reference = referenceByLocale.get(locale);
+    if (reference) {
+      return reference;
+    }
+  }
+  return references[0];
 }
 
-function rowNeedsTranslation(row: CatalogRow, locale: TargetLocale, sourceTargets: Record<SourceKind, boolean>): boolean {
-  return Boolean(row.hasEnglish && hasLlmSourceText(row.english) && sourceTargets[row.entries[locale].final.source]);
+function llmReferenceModeLabel(mode: AppSettings["llmReferenceMode"]): string {
+  switch (mode) {
+    case "en_us":
+      return "1. en_us only";
+    case "fallback":
+      return "2. fallback value";
+    case "all":
+      return "3. all valid values";
+  }
+}
+
+function translationJobsForRows(
+  rows: CatalogRow[],
+  locale: LocaleCode,
+  settings: AppSettings,
+  modTranslations: ModScanResult["translations"],
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch,
+): LlmJob[] {
+  if (!locale) {
+    return [];
+  }
+  return rows
+    .map((row) => row.entries[locale])
+    .filter((entry): entry is ResolvedEntry => Boolean(entry && settings.translateSourceTargets[entry.final.source]))
+    .map((entry) => llmJobForEntry(entry, settings, modTranslations, sourcePacks, project))
+    .filter((job): job is LlmJob => Boolean(job));
+}
+
+function rowNeedsTranslation(row: CatalogRow, locale: LocaleCode, sourceTargets: Record<SourceKind, boolean>): boolean {
+  const entry = locale ? row.entries[locale] : undefined;
+  return Boolean(entry && entryNeedsTranslation(entry, sourceTargets));
+}
+
+function entryNeedsTranslation(entry: ResolvedEntry, sourceTargets: Record<SourceKind, boolean>): boolean {
+  return Boolean(entry.hasSource && hasLlmSourceText(entry.sourceValue) && sourceTargets[entry.final.source]);
+}
+
+function llmJobForEntry(
+  entry: ResolvedEntry,
+  settings: AppSettings,
+  modTranslations: ModScanResult["translations"],
+  sourcePacks: SourcePackScanResult[],
+  project: LangpackProjectPatch,
+): LlmJob | undefined {
+  const sourceValues = resolveLlmReferenceValues(
+    modTranslations,
+    sourcePacks,
+    project,
+    entry.namespace,
+    entry.locale,
+    entry.key,
+    settings.fallbackChains,
+    settings.convertSources,
+    settings.llmReferenceMode,
+  ).filter((sourceValue) => sourceValue.value.trim().length > 0);
+  const primary = sourceValues[0];
+  if (!primary) {
+    return undefined;
+  }
+  return {
+    namespace: entry.namespace,
+    targetLocale: entry.locale,
+    key: entry.key,
+    sourceLocale: primary.locale,
+    sourceText: primary.value,
+    sourceValues,
+    sourceReferenceMode: settings.llmReferenceMode,
+  };
 }
 
 function hasLlmSourceText(jobOrText: LlmJob | string): boolean {
-  const text = typeof jobOrText === "string" ? jobOrText : jobOrText.english;
+  const text = typeof jobOrText === "string" ? jobOrText : jobOrText.sourceText;
   return text.trim().length > 0;
 }
 
@@ -2632,10 +2965,13 @@ function parentUnderManual(entry: ResolvedEntry): CandidateValue {
   return entry.base;
 }
 
-function buildStats(rows: CatalogRow[], locale: TargetLocale, project: LangpackProjectPatch) {
+function buildStats(rows: CatalogRow[], locale: LocaleCode, project: LangpackProjectPatch) {
   const sourceCounts = rows.reduce(
     (counts, row) => {
-      counts[row.entries[locale].final.source] += 1;
+      const entry = locale ? row.entries[locale] : undefined;
+      if (entry) {
+        counts[entry.final.source] += 1;
+      }
       return counts;
     },
     {
@@ -2656,11 +2992,12 @@ function buildStats(rows: CatalogRow[], locale: TargetLocale, project: LangpackP
   };
 }
 
-function countTranslationTargetsBySource(rows: CatalogRow[], locale: TargetLocale): Record<SourceKind, number> {
+function countTranslationTargetsBySource(rows: CatalogRow[], locale: LocaleCode): Record<SourceKind, number> {
   return rows.reduce(
     (counts, row) => {
-      if (row.hasEnglish) {
-        counts[row.entries[locale].final.source] += 1;
+      const entry = locale ? row.entries[locale] : undefined;
+      if (entry) {
+        counts[entry.final.source] += 1;
       }
       return counts;
     },
@@ -2674,6 +3011,16 @@ function countTranslationTargetsBySource(rows: CatalogRow[], locale: TargetLocal
       missing: 0,
     },
   );
+}
+
+function moveListItem<T>(items: readonly T[], index: number, delta: number): T[] {
+  const target = index + delta;
+  if (target < 0 || target >= items.length) {
+    return [...items];
+  }
+  const next = [...items];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
 }
 
 function chunks<T>(items: T[], size: number): T[][] {
@@ -2719,8 +3066,8 @@ function normalizeProjectDraft(project: LangpackProjectPatch | undefined): Langp
   }
 }
 
-function isTargetLocaleValue(value: unknown): value is TargetLocale {
-  return typeof value === "string" && (TARGET_LOCALES as readonly string[]).includes(value);
+function isLocaleCodeValue(value: unknown): value is LocaleCode {
+  return typeof value === "string" && isValidLocaleCode(value);
 }
 
 function isPageId(value: unknown): value is PageId {

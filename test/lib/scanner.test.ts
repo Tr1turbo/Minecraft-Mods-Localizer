@@ -23,6 +23,22 @@ describe("scanner", () => {
     expect(scan.fingerprints[0].name).toBe("create.jar");
   });
 
+  it("reads arbitrary locale JSON from mod jars", async () => {
+    const file = await zipFile("create.jar", {
+      "assets/create/lang/ja_jp.json": {
+        "block.create.shaft": "シャフト",
+      },
+      "assets/create/lang/fr_fr.json": {
+        "block.create.shaft": "Arbre",
+      },
+    });
+
+    const scan = await scanModJars([file]);
+
+    expect(scan.translations.create.ja_jp["block.create.shaft"]).toBe("シャフト");
+    expect(scan.translations.create.fr_fr["block.create.shaft"]).toBe("Arbre");
+  });
+
   it("keeps scanning when a locale file contains invalid JSON", async () => {
     const zip = new JSZip();
     zip.file("assets/good/lang/en_us.json", JSON.stringify({ "item.good": "Good" }));

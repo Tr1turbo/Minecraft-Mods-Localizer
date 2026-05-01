@@ -1,11 +1,11 @@
 import * as OpenCC from "opencc-js";
 
 import { DEFAULT_RUNTIME_PHRASE_MAPPINGS, phraseDictionaryForConversion } from "./phraseMappings";
-import type { PhraseMapping, TargetLocale } from "./types";
+import type { ChineseLocale, PhraseMapping } from "./types";
 
 type OpenCcLocale = "cn" | "twp" | "hk";
 
-const OPENCC_LOCALES: Record<TargetLocale, OpenCcLocale> = {
+const OPENCC_LOCALES: Record<ChineseLocale, OpenCcLocale> = {
   zh_cn: "cn",
   zh_tw: "twp",
   zh_hk: "hk",
@@ -15,8 +15,8 @@ const converters = new WeakMap<readonly PhraseMapping[], Map<string, (input: str
 
 export function convertChineseLocale(
   value: string,
-  from: TargetLocale,
-  to: TargetLocale,
+  from: ChineseLocale,
+  to: ChineseLocale,
   phraseMappings: readonly PhraseMapping[] = DEFAULT_RUNTIME_PHRASE_MAPPINGS,
 ): string {
   if (from === to || !value) {
@@ -25,7 +25,7 @@ export function convertChineseLocale(
   return converterFor(from, to, phraseMappings)(value);
 }
 
-function converterFor(from: TargetLocale, to: TargetLocale, phraseMappings: readonly PhraseMapping[]): (input: string) => string {
+function converterFor(from: ChineseLocale, to: ChineseLocale, phraseMappings: readonly PhraseMapping[]): (input: string) => string {
   const key = `${from}->${to}`;
   const cached = converters.get(phraseMappings)?.get(key);
   if (cached) {

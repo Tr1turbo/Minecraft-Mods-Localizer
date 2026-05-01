@@ -10,7 +10,7 @@ describe("project file", () => {
 
     expect(text).not.toContain("apiKey");
     expect(text).not.toContain("OPENAI_API_KEY");
-    expect(JSON.parse(text).schemaVersion).toBe(1);
+    expect(JSON.parse(text).schemaVersion).toBe(2);
     expect(JSON.parse(text).phraseMappings).toEqual({});
   });
 });

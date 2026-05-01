@@ -572,6 +572,25 @@ pre {
   font-size: 11px;
 }
 
+.localeManageControls {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(170px, 1fr) minmax(120px, 180px) auto;
+}
+
+.localeManageControls input,
+.localeManageControls select {
+  min-height: 34px;
+}
+
+.localeOrderList {
+  background: #f7f9fb;
+  border: 1px solid #e0e7ee;
+  border-radius: 6px;
+  padding: 8px;
+}
+
 .targetHint {
   color: #6a7888;
   font-size: 12px;
@@ -1041,6 +1060,26 @@ pre {
   border: 0;
 }
 
+.keyWarningIcon,
+.referenceWarningIcon {
+  align-items: center;
+  color: #a26213;
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.keyWarningIcon {
+  height: 20px;
+  margin-left: 6px;
+  width: 18px;
+}
+
+.referenceWarningIcon {
+  height: 16px;
+  width: 16px;
+}
+
 .inlineValueInput {
   border-left-width: 5px;
   font-size: 13px;
@@ -1475,6 +1514,10 @@ pre {
   }
 
   .fallbackEditor {
+    grid-template-columns: 1fr;
+  }
+
+  .localeManageControls {
     grid-template-columns: 1fr;
   }
 }

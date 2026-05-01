@@ -18,6 +18,8 @@ describe("deployment config", () => {
 
     expect(defaults.llmSettings.baseUrl).toBe(OFFICIAL_OPENAI_API_BASE_URL);
     expect(defaults.llmSettings.model).toBe("gpt-5.4-mini");
+    expect(defaults.settings.targetLocales).toEqual([]);
+    expect(defaults.settings.llmReferenceMode).toBe("en_us");
   });
 
   it("normalizes partial openai_api, app, and source label config", () => {
@@ -34,6 +36,7 @@ describe("deployment config", () => {
         description: "Custom deployment",
         llmBatchSize: 24,
         llmConcurrency: 4,
+        llmReferenceMode: "fallback",
       },
       sourceLabels: {
         jar: {
@@ -54,6 +57,7 @@ describe("deployment config", () => {
       description: "Custom deployment",
       llmBatchSize: 24,
       llmConcurrency: 4,
+      llmReferenceMode: "fallback",
     });
     expect(normalized.sourceLabels.jar).toMatchObject({
       label: "Mod JAR",
@@ -76,9 +80,11 @@ describe("deployment config", () => {
         packFormat: -4,
         llmBatchSize: 999,
         llmConcurrency: -2,
+        targetLocales: ["zh_tw"],
         fallbackChains: {
-          zh_tw: ["zh_cn", "zh_cn", "bad_locale", "en_us", "zh_tw"],
+          zh_tw: ["zh_cn", "zh_cn", "bad_locale", "zh_tw"],
         },
+        llmReferenceMode: "bad",
       },
       sourceLabels: {
         jar: {
@@ -103,6 +109,8 @@ describe("deployment config", () => {
     expect(normalized.settings.packFormat).toBe(1);
     expect(normalized.settings.llmBatchSize).toBe(200);
     expect(normalized.settings.llmConcurrency).toBe(1);
+    expect(normalized.settings.llmReferenceMode).toBe(defaults.settings.llmReferenceMode);
+    expect(normalized.settings.targetLocales).toEqual(["zh_tw"]);
     expect(normalized.settings.fallbackChains.zh_tw).toEqual(["zh_cn", "en_us"]);
     expect(normalized.sourceLabels.jar).toMatchObject({
       label: defaults.sourceLabels.jar.label,

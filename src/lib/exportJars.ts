@@ -1,7 +1,6 @@
 import JSZip from "jszip";
 
-import type { CatalogRow, SourceKind, TargetLocale } from "./types";
-import { TARGET_LOCALES } from "./types";
+import type { CatalogRow, LocaleCode, SourceKind } from "./types";
 
 const ASSET_NAMESPACE_RE = /^assets\/([^/]+)\//i;
 
@@ -30,7 +29,7 @@ export interface PatchedJarExportOptions {
 export async function createPatchedJarExports(
   files: readonly File[],
   rows: readonly CatalogRow[],
-  locales: readonly TargetLocale[] = TARGET_LOCALES,
+  locales: readonly LocaleCode[] = [],
   options: PatchedJarExportOptions = {},
 ): Promise<PatchedJarExport[]> {
   return (await createPatchedJarExportResult(files, rows, locales, options)).jars;
@@ -39,7 +38,7 @@ export async function createPatchedJarExports(
 export async function createPatchedJarExportResult(
   files: readonly File[],
   rows: readonly CatalogRow[],
-  locales: readonly TargetLocale[] = TARGET_LOCALES,
+  locales: readonly LocaleCode[] = [],
   options: PatchedJarExportOptions = {},
 ): Promise<PatchedJarExportResult> {
   const rowsByNamespace = groupRowsByNamespace(rows);
@@ -61,8 +60,9 @@ export async function createPatchedJarExportResult(
         for (const locale of locales) {
           const data = Object.fromEntries(
             namespaceRows
-              .filter((row) => !options.skipSources?.[row.entries[locale].final.source])
-              .map((row) => [row.key, row.entries[locale].final.value] as const)
+              .map((row) => row.entries[locale])
+              .filter((entry) => entry && !options.skipSources?.[entry.final.source])
+              .map((entry) => [entry.key, entry.final.value] as const)
               .sort(([left], [right]) => left.localeCompare(right)),
           );
           if (Object.keys(data).length === 0) {
@@ -96,7 +96,7 @@ export async function createPatchedJarExportResult(
 export async function createPatchedJarDownload(
   files: readonly File[],
   rows: readonly CatalogRow[],
-  locales: readonly TargetLocale[] = TARGET_LOCALES,
+  locales: readonly LocaleCode[] = [],
   options: PatchedJarExportOptions = {},
 ): Promise<{ blob: Blob; filename: string; jars: PatchedJarExport[]; skipped: SkippedJarExport[] }> {
   const { jars, skipped } = await createPatchedJarExportResult(files, rows, locales, options);
