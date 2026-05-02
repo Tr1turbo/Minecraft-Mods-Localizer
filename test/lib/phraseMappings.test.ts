@@ -33,12 +33,8 @@ describe("phrase mappings", () => {
       zh_hk: ["薯仔"],
     });
     expect(BUILTIN_PHRASE_MAPPINGS.find((mapping) => mapping.id === "curated.entity.ender_pearl")).toBeUndefined();
-    expect(BUILTIN_PHRASE_MAPPINGS.find((mapping) => mapping.id === "curated.item.ender_pearl")).toMatchObject({
-      en_us: ["ender pearl", "ender pearls"],
-      zh_cn: ["末影珍珠"],
-      zh_tw: ["終界珍珠"],
-      zh_hk: ["終界珍珠"],
-    });
+    expect(BUILTIN_PHRASE_MAPPINGS.find((mapping) => mapping.id === "curated.item.ender_pearl")).toBeUndefined();
+    expect(internalIds).toContain("item.minecraft.ender_pearl");
     expect(
       normalizePhraseMappingOverrides({
         "vanilla.full.block.minecraft.oak_slab": { enabled: false },
