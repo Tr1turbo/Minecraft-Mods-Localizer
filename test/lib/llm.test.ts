@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeEntryId } from "../../src/lib/entryId";
-import { DEFAULT_LLM_SYSTEM_PROMPT, listLlmModels, mergeLlmPatches, parseTranslationObject, translateJobsWithLlm, type LlmJob } from "../../src/lib/llm";
+import {
+  DEFAULT_LLM_SYSTEM_PROMPT,
+  listLlmModels,
+  mergeLlmPatches,
+  parseTranslationObject,
+  scanPartialTranslationObject,
+  translateJobsWithLlm,
+  type LlmJob,
+} from "../../src/lib/llm";
 import { createEmptyProjectPatch, createPatchValue } from "../../src/lib/patches";
 import { effectivePhraseMappings, phraseMappingsWithInternalVanilla } from "../../src/lib/phraseMappings";
 import type { TranslationMap } from "../../src/lib/types";
@@ -14,6 +22,24 @@ describe("llm", () => {
   it("parses plain and fenced JSON responses", () => {
     expect(parseTranslationObject('{"a":"b"}')).toEqual({ a: "b" });
     expect(parseTranslationObject('```json\n{"a":"b"}\n```')).toEqual({ a: "b" });
+  });
+
+  it("scans partial JSON object translations", () => {
+    expect(scanPartialTranslationObject('{"block.create.oak_slab":"橡木')).toEqual({
+      completed: {},
+      drafts: { "block.create.oak_slab": "橡木" },
+      complete: false,
+    });
+    expect(scanPartialTranslationObject('{"a":"Quote: \\"ok","b":"\\u6578\\u91cf')).toEqual({
+      completed: { a: 'Quote: "ok' },
+      drafts: { a: 'Quote: "ok', b: "數量" },
+      complete: false,
+    });
+    expect(scanPartialTranslationObject('```json\n{"a":"b"}\n```')).toEqual({
+      completed: { a: "b" },
+      drafts: { a: "b" },
+      complete: true,
+    });
   });
 
   it("lists OpenAI-compatible models", async () => {
@@ -43,7 +69,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "數量",
+                  "screen.create.count": "數量",
                 }),
               },
             },
@@ -80,7 +106,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "數量: %s",
+                  "screen.create.count": "數量: %s",
                 }),
               },
             },
@@ -108,6 +134,106 @@ describe("llm", () => {
     expect(result.patches[id].meta?.model).toBe("mock-model");
   });
 
+  it("streams draft text before applying a completed translation", async () => {
+    const id = makeEntryId("create", "zh_tw", "screen.create.count");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      streamResponse([
+        streamDelta('{"screen.create.count":"數'),
+        streamDelta("量"),
+        streamDelta(': %s"}'),
+        "data: [DONE]\n\n",
+      ]),
+    );
+    const drafts: string[] = [];
+    const patches: string[] = [];
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
+      { create: { en_us: { "screen.create.count": "Count: %s" } } },
+      [],
+      {
+        onDraft: (draftId, text) => {
+          expect(draftId).toBe(id);
+          drafts.push(text);
+        },
+        onPatch: (patchId, patch) => {
+          patches.push(`${patchId}:${patch.value}`);
+        },
+      },
+    );
+
+    expect(drafts).toContain("數");
+    expect(drafts).toContain("數量");
+    expect(patches).toEqual([`${id}:數量: %s`]);
+    expect(result.patches[id].value).toBe("數量: %s");
+  });
+
+  it("falls back to a non-stream request when streaming is rejected", async () => {
+    const id = makeEntryId("create", "zh_tw", "screen.create.count");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("stream unsupported", { status: 400 }))
+      .mockResolvedValueOnce(chatResponse({ "screen.create.count": "數量: %s" }));
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
+      { create: { en_us: { "screen.create.count": "Count: %s" } } },
+      [],
+    );
+
+    const firstRequest = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const secondRequest = JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string);
+    expect(firstRequest.stream).toBe(true);
+    expect(secondRequest.stream).toBeUndefined();
+    expect(result.patches[id].value).toBe("數量: %s");
+  });
+
+  it("keeps completed stream patches and warns for missing keys after a partial stream", async () => {
+    const firstId = makeEntryId("create", "zh_tw", "block.create.oak_slab");
+    const secondId = makeEntryId("create", "zh_tw", "screen.create.count");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      streamResponse([
+        streamDelta('{"block.create.oak_slab":"橡木半磚","screen.create.count":"數'),
+      ]),
+    );
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [
+        job({ targetLocale: "zh_tw", key: "block.create.oak_slab", sourceText: "Oak Slab" }),
+        job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" }),
+      ],
+      { create: { en_us: { "block.create.oak_slab": "Oak Slab", "screen.create.count": "Count: %s" } } },
+      [],
+    );
+
+    expect(result.patches[firstId].value).toBe("橡木半磚");
+    expect(result.patches[secondId]).toBeUndefined();
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining("missing LLM translation")]));
+  });
+
+  it("warns for unknown streamed keys without blocking known translations", async () => {
+    const id = makeEntryId("create", "zh_tw", "screen.create.count");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      streamResponse([
+        streamDelta('{"unknown.key":"忽略","screen.create.count":"數量: %s"}'),
+        "data: [DONE]\n\n",
+      ]),
+    );
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "screen.create.count", sourceText: "Count: %s" })],
+      { create: { en_us: { "screen.create.count": "Count: %s" } } },
+      [],
+    );
+
+    expect(result.patches[id].value).toBe("數量: %s");
+    expect(result.warnings).toEqual(expect.arrayContaining(["unknown.key: unknown LLM translation id"]));
+  });
+
   it("does not send empty source jobs to the LLM endpoint", async () => {
     const validId = makeEntryId("create", "zh_tw", "screen.create.count");
     const emptyId = makeEntryId("argentinasdelightreborn", "zh_tw", "gui.argentinasdelightreborn.sawing_machine_gui.button_auto");
@@ -118,7 +244,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [validId]: "數量",
+                  "screen.create.count": "數量",
                 }),
               },
             },
@@ -157,15 +283,19 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
+    expect(request.stream).toBe(true);
+    expect(payload).toMatchObject({
+      instructions: expect.any(String),
+      to: "zh_tw",
+      outputShape: "Return one JSON object only. Keys must be item ids. Values must be translated strings.",
+    });
+    expect(payload.glossary).toBeUndefined();
+    expect(payload.glossaryInstruction).toBeUndefined();
     expect(payload.items).toEqual([
-      expect.objectContaining({
-        id: validId,
-        targetLocale: "zh_tw",
-        sourceLocale: "en_us",
-        key: "screen.create.count",
-        sourceText: "Count",
-        sourceValues: [{ locale: "en_us", source: "fallback", sourceLabel: "en_us source", text: "Count" }],
-      }),
+      {
+        id: "screen.create.count",
+        refs: [{ locale: "en_us", text: "Count" }],
+      },
     ]);
     expect(result.patches[validId].value).toBe("數量");
     expect(result.patches[emptyId]).toBeUndefined();
@@ -201,7 +331,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "數量: %s",
+                  "screen.create.count": "數量: %s",
                 }),
               },
             },
@@ -237,19 +367,16 @@ describe("llm", () => {
       content: `${DEFAULT_LLM_SYSTEM_PROMPT} Use concise Traditional Chinese.`,
     });
     expect(JSON.parse(request.messages[1].content)).toMatchObject({
-      promptVersion: "minecraft-mods-localizer-v1-custom",
       instructions: "Prefer Minecraft Taiwan terminology.",
+      to: "zh_tw",
       items: [
         {
-          id,
-          targetLocale: "zh_tw",
-          sourceLocale: "en_us",
-          key: "screen.create.count",
-          sourceText: "Count: %s",
-          sourceValues: [{ locale: "en_us", source: "fallback", sourceLabel: "en_us source", text: "Count: %s" }],
+          id: "screen.create.count",
+          refs: [{ locale: "en_us", text: "Count: %s" }],
         },
       ],
     });
+    expect(JSON.parse(request.messages[1].content).promptVersion).toBeUndefined();
     expect(result.patches[id].meta?.promptVersion).toBe("minecraft-mods-localizer-v1-custom");
   });
 
@@ -262,7 +389,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "數量: %s",
+                  "screen.create.count": "數量: %s",
                 }),
               },
             },
@@ -294,12 +421,72 @@ describe("llm", () => {
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
     expect(payload.items[0]).toMatchObject({
-      sourceReferenceMode: "all",
-      sourceValues: [
-        { locale: "en_us", source: "jar", sourceLabel: "en_us jar", text: "Count: %s" },
-        { locale: "es_ar", source: "jar", sourceLabel: "es_ar jar", text: "Cuenta: %s" },
+      id: "screen.create.count",
+      refs: [
+        { locale: "en_us", text: "Count: %s" },
+        { locale: "es_ar", text: "Cuenta: %s" },
       ],
     });
+  });
+
+  it("qualifies only duplicate prompt keys with namespaces", async () => {
+    const firstId = makeEntryId("create", "zh_tw", "block.shared");
+    const secondId = makeEntryId("other", "zh_tw", "block.shared");
+    const uniqueId = makeEntryId("create", "zh_tw", "block.unique");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      chatResponse({
+        "create/block.shared": "共享一",
+        "other/block.shared": "共享二",
+        "block.unique": "唯一",
+      }),
+    );
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [
+        job({ namespace: "create", targetLocale: "zh_tw", key: "block.shared", sourceText: "Shared One" }),
+        job({ namespace: "other", targetLocale: "zh_tw", key: "block.shared", sourceText: "Shared Two" }),
+        job({ namespace: "create", targetLocale: "zh_tw", key: "block.unique", sourceText: "Unique" }),
+      ],
+      {
+        create: { en_us: { "block.shared": "Shared One", "block.unique": "Unique" } },
+        other: { en_us: { "block.shared": "Shared Two" } },
+      },
+      [],
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const payload = JSON.parse(request.messages[1].content);
+    expect(payload.items.map((item: { id: string }) => item.id)).toEqual(["create/block.shared", "other/block.shared", "block.unique"]);
+    expect(result.patches[firstId].value).toBe("共享一");
+    expect(result.patches[secondId].value).toBe("共享二");
+    expect(result.patches[uniqueId].value).toBe("唯一");
+  });
+
+  it("splits mixed target locales into separate requests", async () => {
+    const zhTwId = makeEntryId("create", "zh_tw", "block.create.oak_slab");
+    const zhCnId = makeEntryId("create", "zh_cn", "block.create.oak_slab");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(chatResponse({ "block.create.oak_slab": "橡木半磚" }))
+      .mockResolvedValueOnce(chatResponse({ "block.create.oak_slab": "橡木台阶" }));
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [
+        job({ targetLocale: "zh_tw", key: "block.create.oak_slab", sourceText: "Oak Slab" }),
+        job({ targetLocale: "zh_cn", key: "block.create.oak_slab", sourceText: "Oak Slab" }),
+      ],
+      { create: { en_us: { "block.create.oak_slab": "Oak Slab" } } },
+      [],
+    );
+
+    const firstPayload = JSON.parse(JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string).messages[1].content);
+    const secondPayload = JSON.parse(JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string).messages[1].content);
+    expect(firstPayload.to).toBe("zh_tw");
+    expect(secondPayload.to).toBe("zh_cn");
+    expect(result.patches[zhTwId].value).toBe("橡木半磚");
+    expect(result.patches[zhCnId].value).toBe("橡木台阶");
   });
 
   it("includes matching Phrase Mapping glossary entries in the request payload", async () => {
@@ -311,7 +498,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "橡木半磚",
+                  "block.create.oak_slab": "橡木半磚",
                 }),
               },
             },
@@ -338,9 +525,13 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.phraseGlossary.map((mapping: { id: string }) => mapping.id)).toEqual(
+    expect(payload.glossaryInstruction).toContain("glossary");
+    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).toEqual(
       expect.arrayContaining(["curated.block.slab", "block.minecraft.oak_slab"]),
     );
+    expect(payload.glossary[0]).toHaveProperty("en_us");
+    expect(payload.glossary[0]).toHaveProperty("zh_tw");
+    expect(payload.glossary[0]).not.toHaveProperty("zh_cn");
   });
 
   it("excludes unrelated Phrase Mapping entries and includes matching custom mappings", async () => {
@@ -352,7 +543,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "铜引擎",
+                  "block.create.engine": "铜引擎",
                 }),
               },
             },
@@ -390,10 +581,12 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.phraseGlossary.map((mapping: { id: string }) => mapping.id)).toEqual(
+    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).toEqual(
       expect.arrayContaining(["custom.engine", "curated.item.copper"]),
     );
-    expect(payload.phraseGlossary.map((mapping: { id: string }) => mapping.id)).not.toContain("curated.item.potion");
+    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).not.toContain("curated.item.potion");
+    expect(payload.glossary[0]).toHaveProperty("zh_cn");
+    expect(payload.glossary[0]).not.toHaveProperty("zh_tw");
   });
 
   it("does not add LLM Phrase Mapping glossary entries from key-only matches", async () => {
@@ -405,7 +598,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "铜机器",
+                  "block.create.engine": "铜机器",
                 }),
               },
             },
@@ -443,7 +636,7 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.phraseGlossary.map((mapping: { id: string }) => mapping.id)).not.toContain("custom.engine");
+    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).not.toContain("custom.engine");
   });
 
   it("does not send Chinese Phrase Mapping glossary entries for non-Chinese targets", async () => {
@@ -455,7 +648,7 @@ describe("llm", () => {
             {
               message: {
                 content: JSON.stringify({
-                  [id]: "Dalle de chêne",
+                  "block.create.oak_slab": "Dalle de chêne",
                 }),
               },
             },
@@ -475,7 +668,8 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.phraseGlossary).toEqual([]);
+    expect(payload.glossary).toBeUndefined();
+    expect(payload.glossaryInstruction).toBeUndefined();
   });
 
   it("simulates translations in debug mode without calling an endpoint", async () => {
@@ -550,4 +744,38 @@ function job({
     sourceValues,
     sourceReferenceMode,
   };
+}
+
+function chatResponse(content: Record<string, string>): Response {
+  return new Response(
+    JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify(content),
+          },
+        },
+      ],
+    }),
+    { status: 200 },
+  );
+}
+
+function streamResponse(chunks: string[]): Response {
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(chunk));
+        }
+        controller.close();
+      },
+    }),
+    { status: 200, headers: { "Content-Type": "text/event-stream" } },
+  );
+}
+
+function streamDelta(content: string): string {
+  return `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`;
 }

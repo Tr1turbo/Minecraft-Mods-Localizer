@@ -57,6 +57,7 @@ import {
 } from "./lib/patches";
 import { downloadBlob, projectPatchBlob, readProjectPatchFile } from "./lib/projectFile";
 import { scanModJars, scanResourcePack } from "./lib/scanner";
+import { makeEntryId } from "./lib/entryId";
 import type {
   CatalogRow,
   CandidateValue,
@@ -130,6 +131,12 @@ type TableItem =
 type DiffSegment = { text: string; kind: "same" | "added" };
 type TranslationJobStatus = "running" | "paused" | "stopping";
 
+interface LlmLiveOutput {
+  id: EntryId;
+  text: string;
+  updatedAt: number;
+}
+
 interface TranslationProgress {
   label: string;
   status: TranslationJobStatus;
@@ -138,6 +145,8 @@ interface TranslationProgress {
   startedAt: number;
   updatedAt: number;
   warningCount: number;
+  liveOutputs: LlmLiveOutput[];
+  showPanel: boolean;
 }
 
 interface TranslationControl {
@@ -187,8 +196,10 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [translationProgress, setTranslationProgress] = useState<TranslationProgress | null>(null);
+  const [llmCandidateDisplayDrafts, setLlmCandidateDisplayDrafts] = useState<Record<EntryId, string>>({});
   const [llmWarnings, setLlmWarnings] = useState<string[]>([]);
   const translationControlRef = useRef<TranslationControl>({ paused: false, stopped: false, abortControllers: new Set() });
+  const llmDisplayAnimationRef = useRef(0);
   const [loadingModels, setLoadingModels] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [status, setStatus] = useState<StatusMessage>({ tone: "idle", text: "Ready" });
@@ -262,6 +273,8 @@ function App() {
   );
   const hasManualPatch = isManualEntryPatch(selectedEntry);
   const selectedLlmCandidates = selectedEntry ? (project.llmCandidates?.[selectedEntry.id] ?? []) : [];
+  const selectedLiveLlmOutput = selectedEntry ? translationProgress?.liveOutputs.find((output) => output.id === selectedEntry.id) : undefined;
+  const selectedLlmDisplayDraft = selectedEntry ? llmCandidateDisplayDrafts[selectedEntry.id] : undefined;
   const hasUnsavedPatchEdit = Boolean(selectedEntry && manualDraft !== (selectedEntry.patch?.value ?? selectedEntry.final.value));
   const selectedReferenceValues = useMemo(
     () =>
@@ -704,7 +717,7 @@ function App() {
       setStatus({ tone: "warn", text: "No selected source value." });
       return;
     }
-    await translateJobs([job], "Selected key");
+    await translateJobs([job], "Selected key", { animateSingleCandidate: true, seedLiveOutput: true, showProgressPanel: false });
   }
 
   async function translateNamespace() {
@@ -794,11 +807,37 @@ function App() {
     setStatus({ tone: "ok", text: "Converted base values refreshed." });
   }
 
-  async function translateJobs(jobs: LlmJob[], label = "LLM translation") {
+  async function animateLlmCandidateValue(id: EntryId, value: string) {
+    const token = llmDisplayAnimationRef.current + 1;
+    llmDisplayAnimationRef.current = token;
+    const chars = Array.from(value);
+    for (let index = 1; index <= chars.length; index += 1) {
+      if (llmDisplayAnimationRef.current !== token) {
+        return;
+      }
+      setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: chars.slice(0, index).join("") }));
+      await delay(18);
+    }
+    await delay(250);
+    if (llmDisplayAnimationRef.current !== token) {
+      return;
+    }
+    setLlmCandidateDisplayDrafts((current) => removeDraft(current, id));
+  }
+
+  async function translateJobs(
+    jobs: LlmJob[],
+    label = "LLM translation",
+    options: { animateSingleCandidate?: boolean; seedLiveOutput?: boolean; showProgressPanel?: boolean } = {},
+  ) {
     if (jobs.length === 0) {
       setStatus({ tone: "warn", text: "No translation jobs." });
       return;
     }
+    const initialLiveOutputs =
+      options.seedLiveOutput && jobs.length === 1
+        ? [{ id: makeEntryId(jobs[0].namespace, jobs[0].targetLocale, jobs[0].key), text: "", updatedAt: Date.now() }]
+        : [];
     const control: TranslationControl = { paused: false, stopped: false, abortControllers: new Set() };
     translationControlRef.current = control;
     setTranslating(true);
@@ -811,15 +850,67 @@ function App() {
       startedAt: Date.now(),
       updatedAt: Date.now(),
       warningCount: 0,
+      liveOutputs: initialLiveOutputs,
+      showPanel: options.showProgressPanel ?? true,
     });
     await yieldToBrowser();
     let completed = 0;
+    const completedIds = new Set<EntryId>();
+    const draftHistory = new Map<EntryId, string[]>();
     const warnings: string[] = [];
     try {
       let nextProject = project;
-      const jobChunks = chunks(jobs, settings.llmBatchSize);
+      const jobChunks = chunksByTargetLocale(jobs, settings.llmBatchSize);
       const concurrency = clamp(Math.round(settings.llmConcurrency) || 1, 1, 12);
       let nextChunkIndex = 0;
+
+      function updateProgress(update: (current: TranslationProgress) => TranslationProgress) {
+        setTranslationProgress((current) => (current ? update(current) : current));
+      }
+
+      function updateLiveOutput(id: EntryId, text: string) {
+        draftHistory.set(id, [...(draftHistory.get(id) ?? []), text]);
+        updateProgress((current) => ({
+          ...current,
+          updatedAt: Date.now(),
+          liveOutputs: upsertLiveOutput(current.liveOutputs, { id, text, updatedAt: Date.now() }),
+        }));
+      }
+
+      function removeLiveOutput(id: EntryId) {
+        updateProgress((current) => ({
+          ...current,
+          updatedAt: Date.now(),
+          liveOutputs: current.liveOutputs.filter((output) => output.id !== id),
+        }));
+      }
+
+      function finishItem(id: EntryId) {
+        if (completedIds.has(id)) {
+          removeLiveOutput(id);
+          return;
+        }
+        completedIds.add(id);
+        completed = completedIds.size;
+        updateProgress((current) => ({
+          ...current,
+          status: "running",
+          completed,
+          updatedAt: Date.now(),
+          warningCount: warnings.length,
+          liveOutputs: current.liveOutputs.filter((output) => output.id !== id),
+        }));
+      }
+
+      function addWarning(warning: string) {
+        warnings.push(warning);
+        setLlmWarnings([...warnings]);
+        updateProgress((current) => ({
+          ...current,
+          updatedAt: Date.now(),
+          warningCount: warnings.length,
+        }));
+      }
 
       async function runWorker() {
         while (!control.stopped) {
@@ -834,12 +925,21 @@ function App() {
           }
           const abortController = new AbortController();
           control.abortControllers.add(abortController);
-          let result;
           try {
-            result = await translateJobsWithLlm(llmSettings, chunk, modScan.translations, sourcePacks, runtimePhraseMappings, {
+            await translateJobsWithLlm(llmSettings, chunk, modScan.translations, sourcePacks, runtimePhraseMappings, {
               signal: abortController.signal,
               fallbackChains: settings.fallbackChains,
               convertSources: settings.convertSources,
+              onDraft: (id, text) => updateLiveOutput(id, text),
+              onPatch: (id, patch) => {
+                nextProject = mergeLlmPatches(nextProject, { [id]: patch });
+                setProject(nextProject);
+                if (options.animateSingleCandidate && shouldAnimateSingleCandidate(draftHistory.get(id), patch.value)) {
+                  void animateLlmCandidateValue(id, patch.value);
+                }
+              },
+              onWarning: addWarning,
+              onItemComplete: finishItem,
             });
           } finally {
             control.abortControllers.delete(abortController);
@@ -847,24 +947,6 @@ function App() {
           if (control.stopped) {
             throw new TranslationStoppedError();
           }
-          nextProject = mergeLlmPatches(nextProject, result.patches);
-          warnings.push(...result.warnings);
-          if (result.warnings.length) {
-            setLlmWarnings([...warnings]);
-          }
-          completed += chunk.length;
-          setProject(nextProject);
-          setTranslationProgress((current) =>
-            current
-              ? {
-                  ...current,
-                  status: "running",
-                  completed,
-                  updatedAt: Date.now(),
-                  warningCount: warnings.length,
-                }
-              : current,
-          );
           await yieldToBrowser();
         }
       }
@@ -1216,6 +1298,14 @@ function App() {
                 </label>
               </div>
 
+              {translationProgress?.showPanel ? (
+                <TranslationProgressPanel
+                  progress={translationProgress}
+                  pauseTranslationJob={pauseTranslationJob}
+                  resumeTranslationJob={resumeTranslationJob}
+                  stopTranslationJob={stopTranslationJob}
+                />
+              ) : null}
               <div className="entryTable" role="table">
                 <div className="entryTableHead" role="row">
                   <span>Key</span>
@@ -1320,10 +1410,13 @@ function App() {
                     <PhraseMatchesPanel matches={selectedPhraseMatches} activeLocale={activeLocale} referenceLocale={selectedReference?.locale ?? referenceLocale} />
                   ) : null}
 
-                  {selectedLlmCandidates.length ? (
+                  {selectedLlmCandidates.length || selectedLiveLlmOutput ? (
                     <LlmCandidatesPanel
                       candidates={selectedLlmCandidates}
                       activePatch={selectedEntry.patch}
+                      liveOutput={selectedLiveLlmOutput}
+                      displayDraft={selectedLlmDisplayDraft}
+                      model={llmSettings.model}
                       useCandidate={useLlmCandidate}
                       deleteCandidate={deleteLlmCandidate}
                     />
@@ -1413,14 +1506,24 @@ function SourceBadge({ source }: { source: CandidateValue["source"] }) {
 function LlmCandidatesPanel({
   candidates,
   activePatch,
+  liveOutput,
+  displayDraft,
+  model,
   useCandidate,
   deleteCandidate,
 }: {
   candidates: PatchValue[];
   activePatch: PatchValue | undefined;
+  liveOutput?: LlmLiveOutput;
+  displayDraft?: string;
+  model: string;
   useCandidate: (candidate: PatchValue, index: number) => void;
   deleteCandidate: (candidate: PatchValue, index: number) => void;
 }) {
+  const activeIndex = candidates.findIndex((candidate, index) => isActiveLlmCandidate(activePatch, candidate, index));
+  const liveCandidateIndex = liveOutput && candidates.length ? (activeIndex >= 0 ? activeIndex : candidates.length - 1) : -1;
+  const showLivePlaceholder = Boolean(liveOutput && liveCandidateIndex < 0);
+
   return (
     <section className="llmCandidatePanel">
       <div className="panelHeader">
@@ -1428,23 +1531,45 @@ function LlmCandidatesPanel({
         <span className="candidateCount">{candidates.length} saved</span>
       </div>
       <div className="llmCandidateList">
+        {showLivePlaceholder && liveOutput ? (
+          <article className="llmCandidateCard active streaming">
+            <div className="llmCandidateMeta">
+              <SourceBadge source="llm" />
+              <span>{model || "LLM"}</span>
+              <strong>Generating</strong>
+            </div>
+            <pre>{liveOutput.text || <PendingLlmText />}</pre>
+            <div className="buttonRow compact">
+              <button type="button" disabled>
+                <Check size={16} />
+                Use
+              </button>
+              <button type="button" disabled>
+                <Trash2 size={16} />
+                Delete
+              </button>
+            </div>
+          </article>
+        ) : null}
         {candidates.map((candidate, index) => {
           const active = isActiveLlmCandidate(activePatch, candidate, index);
+          const streaming = liveCandidateIndex === index && liveOutput !== undefined;
+          const animating = active && displayDraft !== undefined && !streaming;
           return (
-            <article className={`llmCandidateCard ${active ? "active" : ""}`} key={llmCandidateKey(candidate, index)}>
+            <article className={`llmCandidateCard ${active || streaming ? "active" : ""} ${streaming ? "streaming" : ""}`} key={llmCandidateKey(candidate, index)}>
               <div className="llmCandidateMeta">
                 <SourceBadge source="llm" />
                 <span>{candidate.meta?.model ?? "LLM"}</span>
                 <time>{formatPatchTime(candidate.updatedAt)}</time>
-                {active ? <strong>Active</strong> : null}
+                {streaming ? <strong>Generating</strong> : active ? <strong>Active</strong> : null}
               </div>
-              <pre>{candidate.value}</pre>
+              <pre>{streaming ? liveOutput.text || <PendingLlmText /> : animating ? displayDraft : candidate.value}</pre>
               <div className="buttonRow compact">
-                <button type="button" onClick={() => useCandidate(candidate, index)} disabled={active}>
+                <button type="button" onClick={() => useCandidate(candidate, index)} disabled={active || streaming}>
                   <Check size={16} />
                   Use
                 </button>
-                <button type="button" onClick={() => deleteCandidate(candidate, index)}>
+                <button type="button" onClick={() => deleteCandidate(candidate, index)} disabled={animating || streaming}>
                   <Trash2 size={16} />
                   Delete
                 </button>
@@ -1454,6 +1579,78 @@ function LlmCandidatesPanel({
         })}
       </div>
     </section>
+  );
+}
+
+const THINKING_WORDS = [
+  "Thinking",
+  "Pondering",
+  "Mulling",
+  "Brewing",
+  "Cogitating",
+  "Conjuring",
+  "Noodling",
+  "Percolating",
+  "Marinating",
+  "Musing",
+  "Ruminating",
+  "Simmering",
+  "Crafting",
+  "Divining",
+  "Imagining",
+  "Translating",
+  "Creeping"
+];
+
+function PendingLlmText() {
+  const [wordIndex, setWordIndex] = useState(() =>
+    Math.floor(Math.random() * THINKING_WORDS.length),
+  );
+  const [typed, setTyped] = useState("");
+  const word = THINKING_WORDS[wordIndex];
+
+  useEffect(() => {
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    setTyped("");
+
+    const typeMs = 65;
+    const eraseMs = 30;
+    const holdMs = 1500;
+
+    for (let i = 1; i <= word.length; i += 1) {
+      timeouts.push(setTimeout(() => setTyped(word.slice(0, i)), i * typeMs));
+    }
+    const eraseStart = word.length * typeMs + holdMs;
+    for (let i = word.length - 1; i >= 0; i -= 1) {
+      timeouts.push(
+        setTimeout(
+          () => setTyped(word.slice(0, i)),
+          eraseStart + (word.length - i) * eraseMs,
+        ),
+      );
+    }
+    const total = eraseStart + word.length * eraseMs + 250;
+    timeouts.push(
+      setTimeout(() => {
+        setWordIndex((prev) => {
+          let next = Math.floor(Math.random() * THINKING_WORDS.length);
+          if (next === prev) next = (next + 1) % THINKING_WORDS.length;
+          return next;
+        });
+      }, total),
+    );
+
+    return () => {
+      for (const t of timeouts) clearTimeout(t);
+    };
+  }, [word]);
+
+  return (
+    <span className="pendingLlmText" aria-label="Waiting for LLM output">
+      <span className="pendingLlmSpinner" />
+      <span className="pendingLlmLabel">{typed}</span>
+      <span className="pendingLlmCaret" aria-hidden="true" />
+    </span>
   );
 }
 
@@ -1695,7 +1892,7 @@ function ProjectPage({
               </div>
             ) : null}
           </div>
-          {translationProgress ? (
+          {translationProgress?.showPanel ? (
             <TranslationProgressPanel
               progress={translationProgress}
               pauseTranslationJob={pauseTranslationJob}
@@ -2976,6 +3173,11 @@ function formatPatchTime(value: string): string {
   });
 }
 
+function liveOutputLabel(id: EntryId): string {
+  const secondSlash = id.indexOf("/", id.indexOf("/") + 1);
+  return secondSlash >= 0 ? id.slice(secondSlash + 1) : id;
+}
+
 function parentUnderManual(entry: ResolvedEntry): CandidateValue {
   return entry.base;
 }
@@ -3044,6 +3246,31 @@ function chunks<T>(items: T[], size: number): T[][] {
     output.push(items.slice(index, index + size));
   }
   return output;
+}
+
+function chunksByTargetLocale(items: LlmJob[], size: number): LlmJob[][] {
+  const groups = new Map<LocaleCode, LlmJob[]>();
+  for (const item of items) {
+    const group = groups.get(item.targetLocale);
+    if (group) {
+      group.push(item);
+    } else {
+      groups.set(item.targetLocale, [item]);
+    }
+  }
+  return [...groups.values()].flatMap((group) => chunks(group, size));
+}
+
+function upsertLiveOutput(outputs: LlmLiveOutput[], next: LlmLiveOutput): LlmLiveOutput[] {
+  const filtered = outputs.filter((output) => output.id !== next.id);
+  return [next, ...filtered];
+}
+
+function shouldAnimateSingleCandidate(drafts: string[] | undefined, value: string): boolean {
+  if (!value) {
+    return false;
+  }
+  return !(drafts ?? []).some((draft) => draft.length > 0 && draft.length < value.length);
 }
 
 class TranslationStoppedError extends Error {

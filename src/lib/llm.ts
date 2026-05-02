@@ -53,6 +53,53 @@ export interface LlmRequestOptions {
   signal?: AbortSignal;
   fallbackChains?: LocaleFallbacks;
   convertSources?: ConvertSourceSettings;
+  onDraft?: (id: EntryId, text: string) => void | Promise<void>;
+  onPatch?: (id: EntryId, patch: PatchValue) => void | Promise<void>;
+  onWarning?: (warning: string) => void | Promise<void>;
+  onItemComplete?: (id: EntryId) => void | Promise<void>;
+}
+
+interface PromptJob {
+  promptId: string;
+  entryId: EntryId;
+  job: LlmJob;
+}
+
+interface LlmTranslationState {
+  patches: Record<EntryId, PatchValue>;
+  warnings: string[];
+  promptJobs: PromptJob[];
+  promptJobById: Map<string, PromptJob>;
+  processedPromptIds: Set<string>;
+  unknownPromptIds: Set<string>;
+  lastDrafts: Map<string, string>;
+  promptVersion: string;
+  settings: LlmSettings;
+  modTranslations: TranslationMap;
+  sourcePacks: SourcePackScanResult[];
+  phraseMappings: readonly PhraseMapping[];
+  options: LlmRequestOptions;
+}
+
+interface PromptPayload {
+  instructions: string;
+  to: LocaleCode;
+  glossaryInstruction?: string;
+  glossary?: Array<Record<string, string[] | string>>;
+  outputShape: string;
+  items: Array<{
+    id: string;
+    refs: Array<{
+      locale: LocaleCode;
+      text: string;
+    }>;
+  }>;
+}
+
+export interface PartialTranslationObjectScan {
+  completed: Record<string, string>;
+  drafts: Record<string, string>;
+  complete: boolean;
 }
 
 export async function listLlmModels(settings: LlmSettings): Promise<string[]> {
@@ -102,27 +149,82 @@ export async function translateJobsWithLlm(
     throw new Error("LLM model is required.");
   }
 
-  const payloadJobs = translatableJobs.map((job) => ({
-    id: makeEntryId(job.namespace, job.targetLocale, job.key),
-    targetLocale: job.targetLocale,
-    sourceLocale: job.sourceLocale,
-    key: job.key,
-    sourceText: job.sourceText,
-    sourceReferenceMode: job.sourceReferenceMode,
-    sourceValues: normalizedJobSourceValues(job).map((sourceValue) => ({
-      locale: sourceValue.locale,
-      source: sourceValue.source,
-      sourceLabel: sourceValue.sourceLabel,
-      text: sourceValue.value,
-    })),
-  }));
-  const promptVersion = promptVersionForSettings(settings);
-  const phraseGlossary = selectPhraseGlossary(
-    translatableJobs.filter((job) => isChineseLocale(job.targetLocale)).map((job) => ({ key: job.key, english: glossarySourceText(job) })),
-    phraseMappings,
-  );
+  const groups = groupJobsByTargetLocale(translatableJobs);
+  const patches: Record<EntryId, PatchValue> = {};
+  const warnings: string[] = [];
 
-  const response = await fetch(`${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+  for (const group of groups) {
+    const result = await translateLocaleJobsWithLlm(settings, group, modTranslations, sourcePacks, phraseMappings, options);
+    Object.assign(patches, result.patches);
+    warnings.push(...result.warnings);
+  }
+
+  return { patches, warnings };
+}
+
+async function translateLocaleJobsWithLlm(
+  settings: LlmSettings,
+  jobs: LlmJob[],
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  phraseMappings: readonly PhraseMapping[],
+  options: LlmRequestOptions,
+): Promise<LlmPatchResult> {
+  const promptVersion = promptVersionForSettings(settings);
+  const promptJobs = createPromptJobs(jobs);
+  const payload = createPromptPayload(settings, promptJobs, phraseMappings);
+  const state = createTranslationState(settings, promptJobs, modTranslations, sourcePacks, phraseMappings, options, promptVersion);
+
+  const streamResponse = await fetchChatCompletion(settings, payload, options, true);
+  if (!streamResponse.ok) {
+    return translateLocaleJobsWithoutStream(settings, payload, state, options);
+  }
+
+  if (!isEventStreamResponse(streamResponse)) {
+    await processChatCompletionResponse(streamResponse, state);
+    await warnMissingPromptJobs(state);
+    return { patches: state.patches, warnings: state.warnings };
+  }
+
+  let content = "";
+  try {
+    await readChatCompletionStream(streamResponse, async (delta) => {
+      content += delta;
+      await processStreamingTranslationContent(content, state);
+    });
+    await processStreamingTranslationContent(content, state);
+    await warnMissingPromptJobs(state);
+    return { patches: state.patches, warnings: state.warnings };
+  } catch (error) {
+    if (isAbortLikeError(error)) {
+      throw error;
+    }
+    if (state.processedPromptIds.size === 0) {
+      return translateLocaleJobsWithoutStream(settings, payload, state, options);
+    }
+    await addWarning(state, `LLM stream ended before every translation completed: ${errorMessage(error)}`);
+    await warnMissingPromptJobs(state);
+    return { patches: state.patches, warnings: state.warnings };
+  }
+}
+
+async function translateLocaleJobsWithoutStream(
+  settings: LlmSettings,
+  payload: PromptPayload,
+  state: LlmTranslationState,
+  options: LlmRequestOptions,
+): Promise<LlmPatchResult> {
+  const response = await fetchChatCompletion(settings, payload, options, false);
+  if (!response.ok) {
+    throw new Error(`LLM request failed: ${response.status} ${await response.text()}`);
+  }
+  await processChatCompletionResponse(response, state);
+  await warnMissingPromptJobs(state);
+  return { patches: state.patches, warnings: state.warnings };
+}
+
+async function fetchChatCompletion(settings: LlmSettings, payload: PromptPayload, options: LlmRequestOptions, stream: boolean): Promise<Response> {
+  return fetch(`${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
     method: "POST",
     signal: options.signal,
     headers: {
@@ -132,6 +234,7 @@ export async function translateJobsWithLlm(
     body: JSON.stringify({
       model: settings.model,
       temperature: 0.2,
+      ...(stream ? { stream: true } : {}),
       messages: [
         {
           role: "system",
@@ -139,24 +242,14 @@ export async function translateJobsWithLlm(
         },
         {
           role: "user",
-          content: JSON.stringify({
-            promptVersion,
-            instructions: resolvedUserPrompt(settings),
-            glossaryInstruction:
-              "When phraseGlossary contains a relevant term for targetLocale, use the first value for that locale as the preferred term. Later values are accepted aliases.",
-            phraseGlossary,
-            outputShape: "Return an object whose keys are item ids and whose values are translated strings.",
-            items: payloadJobs,
-          }),
+          content: JSON.stringify(payload),
         },
       ],
     }),
   });
+}
 
-  if (!response.ok) {
-    throw new Error(`LLM request failed: ${response.status} ${await response.text()}`);
-  }
-
+async function processChatCompletionResponse(response: Response, state: LlmTranslationState): Promise<void> {
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
@@ -164,41 +257,393 @@ export async function translateJobsWithLlm(
   }
 
   const translations = parseTranslationObject(content);
-  const patches: Record<EntryId, PatchValue> = {};
-  const warnings: string[] = [];
+  for (const promptId of Object.keys(translations)) {
+    if (!state.promptJobById.has(promptId)) {
+      await warnUnknownPromptId(state, promptId);
+    }
+  }
+  for (const promptJob of state.promptJobs) {
+    await processPromptTranslation(state, promptJob, translations[promptJob.promptId]);
+  }
+}
 
-  for (const job of translatableJobs) {
-    throwIfAborted(options.signal);
-    const id = makeEntryId(job.namespace, job.targetLocale, job.key);
-    const translated = translations[id];
-    if (typeof translated !== "string" || !translated.trim()) {
-      warnings.push(`${id}: missing LLM translation`);
+function createPromptPayload(settings: LlmSettings, promptJobs: PromptJob[], phraseMappings: readonly PhraseMapping[]): PromptPayload {
+  const targetLocale = promptJobs[0]?.job.targetLocale ?? "";
+  const glossary = isChineseLocale(targetLocale)
+    ? compactGlossary(
+        selectPhraseGlossary(
+          promptJobs.map((promptJob) => ({ key: promptJob.job.key, english: glossarySourceText(promptJob.job) })),
+          phraseMappings,
+        ),
+        targetLocale,
+      )
+    : [];
+  return {
+    instructions: resolvedUserPrompt(settings),
+    to: targetLocale,
+    ...(glossary.length
+      ? {
+          glossaryInstruction: "When glossary contains a relevant term, use the first target term as preferred. Later terms are accepted aliases.",
+          glossary,
+        }
+      : {}),
+    outputShape: "Return one JSON object only. Keys must be item ids. Values must be translated strings.",
+    items: promptJobs.map((promptJob) => ({
+      id: promptJob.promptId,
+      refs: normalizedJobSourceValues(promptJob.job).map((sourceValue) => ({
+        locale: sourceValue.locale,
+        text: sourceValue.value,
+      })),
+    })),
+  };
+}
+
+function compactGlossary(glossary: ReturnType<typeof selectPhraseGlossary>, targetLocale: LocaleCode): Array<Record<string, string[] | string>> {
+  return glossary.map((mapping) => ({
+    id: mapping.id,
+    en_us: mapping.en_us,
+    [targetLocale]: mapping[targetLocale as keyof typeof mapping] as string[],
+    ...(mapping.note ? { note: mapping.note } : {}),
+  }));
+}
+
+function createPromptJobs(jobs: LlmJob[]): PromptJob[] {
+  const keyCounts = countBy(jobs.map((job) => job.key));
+  const usedPromptIds = new Set<string>();
+  return jobs.map((job) => {
+    const basePromptId = (keyCounts.get(job.key) ?? 0) > 1 ? `${job.namespace}/${job.key}` : job.key;
+    const promptId = uniquePromptId(basePromptId, usedPromptIds);
+    usedPromptIds.add(promptId);
+    return {
+      promptId,
+      entryId: makeEntryId(job.namespace, job.targetLocale, job.key),
+      job,
+    };
+  });
+}
+
+function uniquePromptId(basePromptId: string, usedPromptIds: Set<string>): string {
+  if (!usedPromptIds.has(basePromptId)) {
+    return basePromptId;
+  }
+  for (let index = 2; ; index += 1) {
+    const candidate = `${basePromptId}#${index}`;
+    if (!usedPromptIds.has(candidate)) {
+      return candidate;
+    }
+  }
+}
+
+function countBy(values: string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function groupJobsByTargetLocale(jobs: LlmJob[]): LlmJob[][] {
+  const groups = new Map<LocaleCode, LlmJob[]>();
+  for (const job of jobs) {
+    const group = groups.get(job.targetLocale);
+    if (group) {
+      group.push(job);
+    } else {
+      groups.set(job.targetLocale, [job]);
+    }
+  }
+  return [...groups.values()];
+}
+
+function createTranslationState(
+  settings: LlmSettings,
+  promptJobs: PromptJob[],
+  modTranslations: TranslationMap,
+  sourcePacks: SourcePackScanResult[],
+  phraseMappings: readonly PhraseMapping[],
+  options: LlmRequestOptions,
+  promptVersion: string,
+): LlmTranslationState {
+  return {
+    patches: {},
+    warnings: [],
+    promptJobs,
+    promptJobById: new Map(promptJobs.map((promptJob) => [promptJob.promptId, promptJob])),
+    processedPromptIds: new Set(),
+    unknownPromptIds: new Set(),
+    lastDrafts: new Map(),
+    promptVersion,
+    settings,
+    modTranslations,
+    sourcePacks,
+    phraseMappings,
+    options,
+  };
+}
+
+async function processStreamingTranslationContent(content: string, state: LlmTranslationState): Promise<boolean> {
+  const scan = scanPartialTranslationObject(content);
+  let emittedDraft = false;
+
+  for (const [promptId, draft] of Object.entries(scan.drafts)) {
+    const promptJob = state.promptJobById.get(promptId);
+    if (!promptJob || state.processedPromptIds.has(promptId) || state.lastDrafts.get(promptId) === draft) {
       continue;
     }
-    if (!placeholdersMatch(job.sourceText, translated)) {
-      warnings.push(`${id}: rejected LLM translation because placeholders changed`);
-      continue;
-    }
-    const parent = resolveBaseValue(
-      modTranslations,
-      sourcePacks,
-      job.namespace,
-      job.targetLocale,
-      job.key,
-      options.fallbackChains,
-      phraseMappings,
-      undefined,
-      options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
-    );
-    patches[id] = await createPatchValue(translated, parent, {
-      generatedBy: "llm",
-      llmCandidateId: createLlmCandidateId(),
-      model: settings.model,
-      promptVersion,
-    });
+    state.lastDrafts.set(promptId, draft);
+    emittedDraft = true;
+    await state.options.onDraft?.(promptJob.entryId, draft);
   }
 
-  return { patches, warnings };
+  for (const [promptId, translated] of Object.entries(scan.completed)) {
+    const promptJob = state.promptJobById.get(promptId);
+    if (!promptJob) {
+      await warnUnknownPromptId(state, promptId);
+      continue;
+    }
+    await processPromptTranslation(state, promptJob, translated);
+  }
+
+  return emittedDraft;
+}
+
+async function processPromptTranslation(state: LlmTranslationState, promptJob: PromptJob, translated: string | undefined): Promise<void> {
+  if (state.processedPromptIds.has(promptJob.promptId)) {
+    return;
+  }
+  state.processedPromptIds.add(promptJob.promptId);
+  state.lastDrafts.delete(promptJob.promptId);
+
+  const { job, entryId } = promptJob;
+  throwIfAborted(state.options.signal);
+  if (typeof translated !== "string" || !translated.trim()) {
+    await addWarning(state, `${entryId}: missing LLM translation`, entryId);
+    return;
+  }
+  if (!placeholdersMatch(job.sourceText, translated)) {
+    await addWarning(state, `${entryId}: rejected LLM translation because placeholders changed`, entryId);
+    return;
+  }
+
+  const parent = resolveBaseValue(
+    state.modTranslations,
+    state.sourcePacks,
+    job.namespace,
+    job.targetLocale,
+    job.key,
+    state.options.fallbackChains,
+    state.phraseMappings,
+    undefined,
+    state.options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
+  );
+  const patch = await createPatchValue(translated, parent, {
+    generatedBy: "llm",
+    llmCandidateId: createLlmCandidateId(),
+    model: state.settings.model,
+    promptVersion: state.promptVersion,
+  });
+  state.patches[entryId] = patch;
+  await state.options.onPatch?.(entryId, patch);
+  await state.options.onItemComplete?.(entryId);
+}
+
+async function warnMissingPromptJobs(state: LlmTranslationState): Promise<void> {
+  for (const promptJob of state.promptJobs) {
+    if (state.processedPromptIds.has(promptJob.promptId)) {
+      continue;
+    }
+    state.processedPromptIds.add(promptJob.promptId);
+    await addWarning(state, `${promptJob.entryId}: missing LLM translation`, promptJob.entryId);
+  }
+}
+
+async function warnUnknownPromptId(state: LlmTranslationState, promptId: string): Promise<void> {
+  if (state.unknownPromptIds.has(promptId)) {
+    return;
+  }
+  state.unknownPromptIds.add(promptId);
+  await addWarning(state, `${promptId}: unknown LLM translation id`);
+}
+
+async function addWarning(state: LlmTranslationState, warning: string, completedEntryId?: EntryId): Promise<void> {
+  state.warnings.push(warning);
+  await state.options.onWarning?.(warning);
+  if (completedEntryId) {
+    await state.options.onItemComplete?.(completedEntryId);
+  }
+}
+
+function isEventStreamResponse(response: Response): boolean {
+  return Boolean(response.body && response.headers.get("Content-Type")?.toLowerCase().includes("text/event-stream"));
+}
+
+async function readChatCompletionStream(response: Response, onContent: (content: string) => Promise<void>): Promise<void> {
+  if (!response.body) {
+    throw new Error("LLM streaming response did not include a body.");
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split(/\r?\n\r?\n/);
+    buffer = events.pop() ?? "";
+    for (const event of events) {
+      await processStreamEvent(event, onContent);
+    }
+  }
+
+  buffer += decoder.decode();
+  if (buffer.trim()) {
+    await processStreamEvent(buffer, onContent);
+  }
+}
+
+async function processStreamEvent(event: string, onContent: (content: string) => Promise<void>): Promise<void> {
+  const data = event
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trim())
+    .join("\n");
+  if (!data || data === "[DONE]") {
+    return;
+  }
+  const parsed = JSON.parse(data);
+  const content = parsed?.choices?.[0]?.delta?.content;
+  if (typeof content === "string" && content) {
+    await onContent(content);
+  }
+}
+
+export function scanPartialTranslationObject(content: string): PartialTranslationObjectScan {
+  const objectStart = content.indexOf("{");
+  const completed: Record<string, string> = {};
+  const drafts: Record<string, string> = {};
+  if (objectStart < 0) {
+    return { completed, drafts, complete: false };
+  }
+
+  let index = objectStart + 1;
+  while (index < content.length) {
+    index = skipJsonWhitespaceAndCommas(content, index);
+    if (content[index] === "}") {
+      return { completed, drafts, complete: true };
+    }
+    if (content[index] !== "\"") {
+      break;
+    }
+
+    const key = readJsonString(content, index);
+    if (!key.complete) {
+      break;
+    }
+    index = skipJsonWhitespace(content, key.end);
+    if (content[index] !== ":") {
+      break;
+    }
+    index = skipJsonWhitespace(content, index + 1);
+    drafts[key.value] = "";
+    if (content[index] !== "\"") {
+      break;
+    }
+
+    const value = readJsonString(content, index);
+    drafts[key.value] = value.value;
+    if (!value.complete) {
+      break;
+    }
+    completed[key.value] = value.value;
+    index = value.end;
+  }
+
+  return { completed, drafts, complete: false };
+}
+
+function skipJsonWhitespaceAndCommas(content: string, index: number): number {
+  let next = index;
+  while (next < content.length && (isJsonWhitespace(content[next]) || content[next] === ",")) {
+    next += 1;
+  }
+  return next;
+}
+
+function skipJsonWhitespace(content: string, index: number): number {
+  let next = index;
+  while (next < content.length && isJsonWhitespace(content[next])) {
+    next += 1;
+  }
+  return next;
+}
+
+function isJsonWhitespace(value: string | undefined): boolean {
+  return value === " " || value === "\n" || value === "\r" || value === "\t";
+}
+
+function readJsonString(content: string, start: number): { value: string; complete: boolean; end: number } {
+  let value = "";
+  let index = start + 1;
+  while (index < content.length) {
+    const char = content[index];
+    if (char === "\"") {
+      return { value, complete: true, end: index + 1 };
+    }
+    if (char !== "\\") {
+      value += char;
+      index += 1;
+      continue;
+    }
+
+    if (index + 1 >= content.length) {
+      return { value, complete: false, end: content.length };
+    }
+    const escaped = content[index + 1];
+    switch (escaped) {
+      case "\"":
+      case "\\":
+      case "/":
+        value += escaped;
+        index += 2;
+        break;
+      case "b":
+        value += "\b";
+        index += 2;
+        break;
+      case "f":
+        value += "\f";
+        index += 2;
+        break;
+      case "n":
+        value += "\n";
+        index += 2;
+        break;
+      case "r":
+        value += "\r";
+        index += 2;
+        break;
+      case "t":
+        value += "\t";
+        index += 2;
+        break;
+      case "u": {
+        const hex = content.slice(index + 2, index + 6);
+        if (hex.length < 4 || !/^[0-9a-f]{4}$/i.test(hex)) {
+          return { value, complete: false, end: content.length };
+        }
+        value += String.fromCharCode(Number.parseInt(hex, 16));
+        index += 6;
+        break;
+      }
+      default:
+        return { value, complete: false, end: content.length };
+    }
+  }
+  return { value, complete: false, end: content.length };
 }
 
 function hasLlmSourceText(job: LlmJob): boolean {
@@ -253,12 +698,16 @@ async function translateJobsWithDebugLlm(
       undefined,
       options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
     );
-    patches[id] = await createPatchValue(debugTranslate(job.sourceText, job.targetLocale), parent, {
+    const translated = debugTranslate(job.sourceText, job.targetLocale);
+    await options.onDraft?.(id, translated);
+    patches[id] = await createPatchValue(translated, parent, {
       generatedBy: "llm",
       llmCandidateId: createLlmCandidateId(),
       model: settings.model.trim() || "debug-simulated-llm",
       promptVersion: `${LLM_PROMPT_VERSION}-debug`,
     });
+    await options.onPatch?.(id, patches[id]);
+    await options.onItemComplete?.(id);
     if ((index + 1) % 8 === 0) {
       await delayWithAbort(0, options.signal);
     }
@@ -300,6 +749,14 @@ function abortError(): Error {
   const error = new Error("LLM translation aborted.");
   error.name = "AbortError";
   return error;
+}
+
+function isAbortLikeError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function debugTranslate(value: string, locale: LocaleCode): string {
