@@ -1520,10 +1520,6 @@ function LlmCandidatesPanel({
   useCandidate: (candidate: PatchValue, index: number) => void;
   deleteCandidate: (candidate: PatchValue, index: number) => void;
 }) {
-  const activeIndex = candidates.findIndex((candidate, index) => isActiveLlmCandidate(activePatch, candidate, index));
-  const liveCandidateIndex = liveOutput && candidates.length ? (activeIndex >= 0 ? activeIndex : candidates.length - 1) : -1;
-  const showLivePlaceholder = Boolean(liveOutput && liveCandidateIndex < 0);
-
   return (
     <section className="llmCandidatePanel">
       <div className="panelHeader">
@@ -1531,7 +1527,32 @@ function LlmCandidatesPanel({
         <span className="candidateCount">{candidates.length} saved</span>
       </div>
       <div className="llmCandidateList">
-        {showLivePlaceholder && liveOutput ? (
+        {candidates.map((candidate, index) => {
+          const active = isActiveLlmCandidate(activePatch, candidate, index);
+          const animating = active && displayDraft !== undefined;
+          return (
+            <article className={`llmCandidateCard ${active ? "active" : ""}`} key={llmCandidateKey(candidate, index)}>
+              <div className="llmCandidateMeta">
+                <SourceBadge source="llm" />
+                <span>{candidate.meta?.model ?? "LLM"}</span>
+                <time>{formatPatchTime(candidate.updatedAt)}</time>
+                {active ? <strong>Active</strong> : null}
+              </div>
+              <pre>{animating ? displayDraft : candidate.value}</pre>
+              <div className="buttonRow compact">
+                <button type="button" onClick={() => useCandidate(candidate, index)} disabled={active}>
+                  <Check size={16} />
+                  Use
+                </button>
+                <button type="button" onClick={() => deleteCandidate(candidate, index)} disabled={animating}>
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        {liveOutput ? (
           <article className="llmCandidateCard active streaming">
             <div className="llmCandidateMeta">
               <SourceBadge source="llm" />
@@ -1551,32 +1572,6 @@ function LlmCandidatesPanel({
             </div>
           </article>
         ) : null}
-        {candidates.map((candidate, index) => {
-          const active = isActiveLlmCandidate(activePatch, candidate, index);
-          const streaming = liveCandidateIndex === index && liveOutput !== undefined;
-          const animating = active && displayDraft !== undefined && !streaming;
-          return (
-            <article className={`llmCandidateCard ${active || streaming ? "active" : ""} ${streaming ? "streaming" : ""}`} key={llmCandidateKey(candidate, index)}>
-              <div className="llmCandidateMeta">
-                <SourceBadge source="llm" />
-                <span>{candidate.meta?.model ?? "LLM"}</span>
-                <time>{formatPatchTime(candidate.updatedAt)}</time>
-                {streaming ? <strong>Generating</strong> : active ? <strong>Active</strong> : null}
-              </div>
-              <pre>{streaming ? liveOutput.text || <PendingLlmText /> : animating ? displayDraft : candidate.value}</pre>
-              <div className="buttonRow compact">
-                <button type="button" onClick={() => useCandidate(candidate, index)} disabled={active || streaming}>
-                  <Check size={16} />
-                  Use
-                </button>
-                <button type="button" onClick={() => deleteCandidate(candidate, index)} disabled={animating || streaming}>
-                  <Trash2 size={16} />
-                  Delete
-                </button>
-              </div>
-            </article>
-          );
-        })}
       </div>
     </section>
   );
