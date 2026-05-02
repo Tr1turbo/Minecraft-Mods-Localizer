@@ -1,0 +1,88 @@
+.translationProgressPanel {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.progressHeader,
+.progressFooter {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.progressHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.progressHeader strong {
+  color: #263649;
+}
+
+.progressHeader span,
+.progressStats {
+  color: #657384;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.progressBar {
+  background: #e8eef4;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  background: #1c6e65;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.progressStats,
+.progressControls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.llmWarningsPanel {
+  background: #fffaf0;
+  border: 1px solid #e6d4aa;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.llmWarningsPanel .panelHeader {
+  align-items: center;
+}
+
+.llmWarningsPanel h2 {
+  color: #6d4e17;
+}
+
+.llmWarningList {
+  color: #6b5b3a;
+  display: grid;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  gap: 5px;
+  line-height: 1.45;
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding-left: 20px;
+  padding-right: 4px;
+}
+
+.llmWarningList li {
+  overflow-wrap: anywhere;
+}

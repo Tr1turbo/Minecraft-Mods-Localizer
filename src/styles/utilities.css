@@ -1,0 +1,20 @@
+.emptyState {
+  color: #7a8795;
+  font-size: 13px;
+  padding: 10px 0;
+}
+
+.tableEmpty,
+.detailEmpty {
+  padding: 24px;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

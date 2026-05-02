@@ -1,0 +1,104 @@
+.panel,
+.editPanel,
+.finalPanel,
+.llmCandidatePanel,
+.valueBlock {
+  background: #ffffff;
+  border: 1px solid #d7dfe7;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+}
+
+.panelHeader,
+.valueBlockHeader {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.panelHeader h2,
+.editPanel h2,
+.finalPanel h2 {
+  font-size: 13px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.metricsPanel {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.metricsPanel.wide {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.metric {
+  background: #f1f5f8;
+  border-radius: 6px;
+  padding: 9px;
+}
+
+.metric span {
+  color: #657384;
+  display: block;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.metric strong {
+  font-size: 17px;
+}
+
+.sourcePackList {
+  display: grid;
+  gap: 8px;
+}
+
+.sourcePackRow {
+  align-items: center;
+  background: #f7f9fb;
+  border: 1px solid #dde5ed;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 38px;
+  padding: 5px 6px 5px 9px;
+}
+
+.sourcePackRow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconGroup,
+.buttonRow {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.buttonRow.compact {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.buttonRow.projectActions {
+  flex-wrap: wrap;
+}
+
+.iconButton {
+  height: 28px;
+  padding: 0;
+  width: 28px;
+}
+
+.iconButton.danger {
+  color: #a33b3b;
+}

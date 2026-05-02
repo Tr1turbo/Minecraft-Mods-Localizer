@@ -1,0 +1,94 @@
+@media (max-width: 1280px) {
+  .tableToolbar {
+    grid-template-columns: auto minmax(160px, 1fr);
+  }
+}
+
+@media (max-width: 1040px) {
+  .workspace {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .leftPane {
+    grid-row: 1 / span 2;
+  }
+
+  .pagePane,
+  .centerPane,
+  .rightPane {
+    grid-column: 2;
+  }
+
+  .splitHandle {
+    display: none;
+  }
+
+  .rightPane {
+    border-left: 0;
+    border-top: 1px solid #d7dfe7;
+    max-height: 380px;
+  }
+
+  .entryTableHead,
+  .entryRow,
+  .prefixDivider {
+    grid-template-columns: minmax(140px, 1fr) max-content minmax(150px, 1.1fr);
+  }
+
+  .tableToolbar {
+    grid-template-columns: auto minmax(180px, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .appShell {
+    height: auto;
+    min-height: 100vh;
+    min-width: 0;
+  }
+
+  .topBar,
+  .workspace {
+    display: block;
+  }
+
+  .topActions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .leftPane,
+  .rightPane {
+    border: 0;
+  }
+
+  .centerPane {
+    min-height: 520px;
+  }
+
+  .tableToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .namespaceHeader {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .namespaceHeaderActions {
+    justify-content: flex-start;
+  }
+
+  .pagePane {
+    padding: 12px;
+  }
+
+  .fallbackEditor {
+    grid-template-columns: 1fr;
+  }
+
+  .localeManageControls {
+    grid-template-columns: 1fr;
+  }
+}

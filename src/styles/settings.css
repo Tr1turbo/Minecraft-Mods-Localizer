@@ -1,0 +1,242 @@
+.llmPanel {
+  display: grid;
+  gap: 9px;
+}
+
+.settingsPanel {
+  display: grid;
+  gap: 10px;
+  max-width: 680px;
+}
+
+.llmPanel label {
+  color: #536171;
+  display: grid;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.llmPanel .promptTextarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.llmPanel .promptTextarea.large {
+  min-height: 116px;
+}
+
+.settingsPanel label {
+  color: #536171;
+  display: grid;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.settingsPanel label.checkboxControl {
+  align-items: center;
+  color: #344253;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  width: fit-content;
+}
+
+.phraseMappingPanel {
+  max-width: 980px;
+}
+
+.phraseMappingToolbar {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.phraseMappingList {
+  display: grid;
+  gap: 9px;
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.phraseMappingCard {
+  background: #f8fafc;
+  border: 1px solid #dfe7ef;
+  border-radius: 7px;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+}
+
+.phraseMappingCardHead {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.phraseMappingIdentity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.phraseMappingIdentity strong,
+.phraseMappingIdentity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phraseMappingIdentity strong {
+  color: #263649;
+  font-size: 12px;
+}
+
+.phraseMappingIdentity span {
+  color: #657384;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.phraseMappingGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(100px, 1fr));
+}
+
+.projectActionPanel {
+  display: grid;
+  gap: 10px;
+}
+
+.panelNote {
+  color: #657384;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modelControl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  position: relative;
+}
+
+.modelMenuButton {
+  min-width: 96px;
+}
+
+.modelMenu {
+  background: #ffffff;
+  border: 1px solid #cbd5df;
+  border-radius: 6px;
+  box-shadow: 0 12px 28px rgb(23 32 42 / 0.16);
+  display: grid;
+  gap: 2px;
+  grid-column: 1 / -1;
+  left: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 4px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+}
+
+.modelMenu button {
+  background: transparent;
+  border-color: transparent;
+  justify-content: flex-start;
+  min-height: 30px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.modelMenu button:hover,
+.modelMenu button.active {
+  background: #e8f4f2;
+  border-color: #c2ddd8;
+  color: #1c6e65;
+}
+
+.translateTargetGroup {
+  background: #f7f9fb;
+  border: 1px solid #e0e7ee;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+
+.translateTargetGroup > span {
+  color: #536171;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sourceTargetToggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settingsPanel label.sourceTargetToggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 6px;
+  color: #344253;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 7px;
+  width: fit-content;
+}
+
+.settingsPanel label.sourceTargetToggle.active {
+  border-color: #83b9b2;
+  box-shadow: inset 0 0 0 1px #83b9b2;
+}
+
+.sourceTargetToggle input {
+  height: 14px;
+  min-height: 14px;
+  padding: 0;
+  width: 14px;
+}
+
+.sourceTargetToggle strong {
+  color: #657384;
+  font-size: 11px;
+}
+
+.localeManageControls {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(170px, 1fr) minmax(120px, 180px) auto;
+}
+
+.localeManageControls input,
+.localeManageControls select {
+  min-height: 34px;
+}
+
+.localeOrderList {
+  background: #f7f9fb;
+  border: 1px solid #e0e7ee;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.targetHint {
+  color: #6a7888;
+  font-size: 12px;
+}
