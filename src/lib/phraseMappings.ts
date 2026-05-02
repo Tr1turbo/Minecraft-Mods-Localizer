@@ -117,7 +117,9 @@ export function phraseDictionaryForConversion(
     }
     for (const fromValue of mapping[from]) {
       const sourceValue = fromValue.trim();
-      if (!sourceValue || sourceValue === toValue || pairs.has(sourceValue)) {
+      // Keep identity pairs: OpenCC's longest-match trie can use them to protect
+      // longer vanilla phrases from shorter substitutions inside the phrase.
+      if (!sourceValue || pairs.has(sourceValue)) {
         continue;
       }
       pairs.set(sourceValue, toValue);

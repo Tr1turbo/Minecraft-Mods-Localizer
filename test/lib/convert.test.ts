@@ -27,6 +27,12 @@ describe("Chinese locale conversion", () => {
     expect(convertChineseLocale("末影珍珠", "zh_cn", "zh_tw")).toBe("終界珍珠");
   });
 
+  it("lets identical vanilla phrases protect longer terms from shorter mappings", () => {
+    expect(convertChineseLocale("飛濺挖掘加速藥水", "zh_tw", "zh_hk", [])).toBe("飛濺挖掘加速藥水");
+    expect(convertChineseLocale("飛濺挖掘加速藥水", "zh_tw", "zh_hk")).toBe("飛濺挖掘加速藥水");
+    expect(convertChineseLocale("加速藥水", "zh_tw", "zh_hk")).toBe("速度藥水");
+  });
+
   it("excludes disabled mappings and lets project overrides win", () => {
     const disabledPotato = effectivePhraseMappings({
       "curated.item.potato": { enabled: false },
