@@ -5,8 +5,8 @@ export type ChineseLocale = (typeof CHINESE_LOCALES)[number];
 export type LocaleFallbacks = Record<LocaleCode, string[]>;
 
 export const DEFAULT_CHINESE_LOCALE_FALLBACKS: Record<ChineseLocale, string[]> = {
-  zh_cn: ["zh_hk", "zh_tw", "en_us"],
   zh_tw: ["zh_hk", "zh_cn", "en_us"],
+  zh_cn: ["zh_hk", "zh_tw", "en_us"],
   zh_hk: ["zh_tw", "zh_cn", "en_us"],
 };
 

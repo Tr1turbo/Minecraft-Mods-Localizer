@@ -12,6 +12,7 @@ import {
   type AppSettings,
   type SourceLabelSettings,
   clamp,
+  defaultFallbackChainForLocale,
   normalizeFallbackChain,
 } from "../../lib/deploymentConfig";
 import { BUNDLED_LOCALE_CODES, CHINESE_LOCALES, isValidLocaleCode, normalizeLocaleCode, uniqueLocaleCodes } from "../../lib/locales";
@@ -203,7 +204,7 @@ export function SettingsPage({
         targetLocales: [...current.targetLocales, normalized],
         fallbackChains: {
           ...current.fallbackChains,
-          [normalized]: current.fallbackChains[normalized] ?? [],
+          [normalized]: current.fallbackChains[normalized] ?? defaultFallbackChainForLocale(normalized),
         },
       };
     });

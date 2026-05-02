@@ -84,7 +84,7 @@ Runtime defaults are loaded from `app-config.json` next to the deployed `index.h
 
 Deployment config seeds first-run defaults only. After a user changes Settings, the browser draft takes precedence. For private endpoint testing, use the Settings page or a local uncommitted `app-config.json`.
 
-Each target locale fallback chain includes `en_us` by default. LLM source values can start from `en_us`, the configured fallback value, or all valid loaded values.
+Each target locale fallback chain includes `en_us` by default. Chinese targets also get built-in cross-locale defaults: `zh_tw` uses `zh_hk`, `zh_cn`, `en_us`; `zh_cn` uses `zh_hk`, `zh_tw`, `en_us`; and `zh_hk` uses `zh_tw`, `zh_cn`, `en_us`. LLM source values can start from `en_us`, the configured fallback value, or all valid loaded values.
 
 `sourceLabels` can also override each source badge's `label`, `background`, `text`, and `stripe` color for `jar`, `resourcePack`, `converted`, `llm`, `manual`, `fallback`, and `missing`.
 

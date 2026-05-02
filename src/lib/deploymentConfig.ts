@@ -12,8 +12,8 @@ import type {
   LlmReferenceMode,
   SourceKind,
 } from "./types";
-import { DEFAULT_CONVERT_SOURCE_SETTINGS, DEFAULT_EXPORT_SKIP_SOURCES } from "./types";
-import { uniqueLocaleCodes } from "./locales";
+import { DEFAULT_CHINESE_LOCALE_FALLBACKS, DEFAULT_CONVERT_SOURCE_SETTINGS, DEFAULT_EXPORT_SKIP_SOURCES } from "./types";
+import { isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./locales";
 
 export const DEPLOYMENT_CONFIG_FILENAME = "app-config.json";
 export const OFFICIAL_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
@@ -190,6 +190,11 @@ export function normalizeFallbackChain(locale: LocaleCode, chain: readonly unkno
   return uniqueLocaleCodes([...chain, DEFAULT_FALLBACK_LOCALE]).filter((item) => item !== locale);
 }
 
+export function defaultFallbackChainForLocale(locale: LocaleCode): string[] {
+  const normalized = normalizeLocaleCode(locale);
+  return isChineseLocale(normalized) ? [...DEFAULT_CHINESE_LOCALE_FALLBACKS[normalized]] : [];
+}
+
 export function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
 }
@@ -321,7 +326,11 @@ function normalizeFallbackChains(raw: unknown, targetLocales: readonly LocaleCod
   const source = isRecord(raw) ? raw : {};
   const next: LocaleFallbacks = {};
   for (const locale of targetLocales) {
-    const rawChain = Array.isArray(source[locale]) ? source[locale] : (base[locale] ?? []);
+    const rawChain = Array.isArray(source[locale])
+      ? source[locale]
+      : Array.isArray(base[locale])
+        ? base[locale]
+        : defaultFallbackChainForLocale(locale);
     next[locale] = normalizeFallbackChain(locale, rawChain);
   }
   return next;

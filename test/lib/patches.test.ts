@@ -393,6 +393,19 @@ describe("patch resolution", () => {
     expect(normalized.sourceLocalePriority).toEqual([]);
   });
 
+  it("uses default Chinese fallback chains when project patches omit them", () => {
+    const normalized = normalizeProjectPatch({
+      schemaVersion: 2,
+      locales: ["zh_tw", "zh_cn", "zh_hk"],
+    });
+
+    expect(normalized.fallbackChains).toEqual({
+      zh_tw: ["zh_hk", "zh_cn", "en_us"],
+      zh_cn: ["zh_hk", "zh_tw", "en_us"],
+      zh_hk: ["zh_tw", "zh_cn", "en_us"],
+    });
+  });
+
   it("normalizes Phrase Mapping overrides in project patches", () => {
     const normalized = normalizeProjectPatch({
       schemaVersion: 1,

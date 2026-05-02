@@ -67,6 +67,20 @@ describe("deployment config", () => {
     });
   });
 
+  it("uses default Chinese fallback chains when app config omits them", () => {
+    const normalized = normalizeDeploymentConfig({
+      app: {
+        targetLocales: ["zh_tw", "zh_cn", "zh_hk"],
+      },
+    });
+
+    expect(normalized.settings.fallbackChains).toEqual({
+      zh_tw: ["zh_hk", "zh_cn", "en_us"],
+      zh_cn: ["zh_hk", "zh_tw", "en_us"],
+      zh_hk: ["zh_tw", "zh_cn", "en_us"],
+    });
+  });
+
   it("ignores invalid fields, unknown source keys, and public API key fields", () => {
     const defaults = createDefaultDeploymentDefaults();
     const normalized = normalizeDeploymentConfig({

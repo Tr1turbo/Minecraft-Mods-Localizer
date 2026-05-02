@@ -524,11 +524,12 @@ function normalizeFallbackChains(raw: unknown, locales: readonly LocaleCode[], l
   const fallbackInput = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const result: LocaleFallbacks = {};
   for (const locale of locales) {
+    const defaultChain = isChineseLocale(locale) ? DEFAULT_CHINESE_LOCALE_FALLBACKS[locale] : [];
     const rawChain = Array.isArray(fallbackInput[locale])
       ? fallbackInput[locale]
       : Array.isArray(legacyFallbacks[locale])
         ? legacyFallbacks[locale]
-        : [];
+        : defaultChain;
     result[locale] = normalizeFallbackChain(locale, rawChain);
   }
   return result;
