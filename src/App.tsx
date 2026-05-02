@@ -1307,6 +1307,7 @@ function App() {
                 <>
                   <section className="valueStack">
                     <ReferenceValueBlock
+                      globalReferenceLocale={referenceLocale}
                       referenceLocale={selectedReference?.locale ?? ""}
                       availableReferenceValues={selectedReferenceValues}
                       onReferenceLocaleChange={updateReferenceLocale}
@@ -2632,11 +2633,13 @@ function ValueBlock({ title, source, label, value }: { title: string; source: Ca
 }
 
 function ReferenceValueBlock({
+  globalReferenceLocale,
   referenceLocale,
   availableReferenceValues,
   onReferenceLocaleChange,
   hasEnUsValue,
 }: {
+  globalReferenceLocale: LocaleCode;
   referenceLocale: LocaleCode;
   availableReferenceValues: readonly ReferenceValue[];
   onReferenceLocaleChange: (locale: LocaleCode) => void;
@@ -2644,6 +2647,10 @@ function ReferenceValueBlock({
 }) {
   const referenceByLocale = new Map(availableReferenceValues.map((reference) => [reference.locale, reference]));
   const currentReference = referenceByLocale.get(referenceLocale);
+  const fallbackNotice =
+    globalReferenceLocale && currentReference && currentReference.locale !== globalReferenceLocale && !referenceByLocale.has(globalReferenceLocale)
+      ? { requestedLocale: globalReferenceLocale, displayedLocale: currentReference.locale }
+      : undefined;
   const source = currentReference?.source ?? "missing";
   const label = currentReference?.sourceLabel ?? "No reference";
   const value = currentReference?.value ?? "";
@@ -2671,6 +2678,14 @@ function ReferenceValueBlock({
           <SourceBadge source={source} /> {label}
         </span>
       </div>
+      {fallbackNotice ? (
+        <div className="referenceFallbackNotice">
+          <TriangleAlert size={14} />
+          <span>
+            No <b>{fallbackNotice.requestedLocale}</b> reference for this key. Showing <b>{fallbackNotice.displayedLocale}</b> instead.
+          </span>
+        </div>
+      ) : null}
       <pre>{value || "None"}</pre>
     </section>
   );

@@ -1290,6 +1290,24 @@
     "note": "Extracted from 16 vanilla item names ending in \"dye\"."
   },
   {
+    "id": "curated.item.ender",
+    "enabled": true,
+    "source": "curated",
+    "en_us": [
+      "ender"
+    ],
+    "zh_cn": [
+      "末影"
+    ],
+    "zh_tw": [
+      "終界"
+    ],
+    "zh_hk": [
+      "終界"
+    ],
+    "note": "Extracted reusable phrase from vanilla item.minecraft.end_crystal."
+  },
+  {
     "id": "curated.item.golden",
     "enabled": true,
     "source": "curated",
