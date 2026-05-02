@@ -77,9 +77,13 @@ import {
   createDefaultDeploymentDefaults,
   createDefaultLlmSettings,
   createDefaultSourceLabels,
+  mergeAppSettings,
+  mergeLlmSettings,
+  SOURCE_LABEL_ORDER,
 } from "./lib/deploymentConfig";
 import {
   clearBrowserDraftModFiles,
+  clearBrowserDraftStorage,
   writeBrowserDraftSnapshot,
 } from "./lib/browserDraft";
 
@@ -261,7 +265,7 @@ function App() {
     [inlineDrafts, manualDraft, modScan.fingerprints.length, project, selectedEntry, sourcePacks.length],
   );
 
-  const { resetSavedModFileKey, restoredManualDraftRef } = useBrowserDraftPersistence({
+  const { pauseAutosave, resetSavedModFileKey, resumeAutosave, restoredManualDraftRef } = useBrowserDraftPersistence({
     draftState,
     hasRestorableProgress,
     busy,
@@ -663,6 +667,52 @@ function App() {
     }
   }
 
+  async function clearAllState() {
+    if (busy || translating) {
+      setStatus({ tone: "warn", text: "Wait for the current operation to finish before clearing state." });
+      return;
+    }
+    const confirmed = window.confirm("Delete all app state and this app's browser storage? Export a patch first if you need this work.");
+    if (!confirmed) {
+      return;
+    }
+
+    const defaultSettings = mergeAppSettings(undefined, deploymentDefaults.settings);
+    const defaultLlmSettings = mergeLlmSettings(deploymentDefaults.llmSettings, undefined);
+    const defaultSourceLabels = Object.fromEntries(
+      SOURCE_LABEL_ORDER.map((source) => [source, { ...deploymentDefaults.sourceLabels[source] }]),
+    ) as SourceLabelSettings;
+
+    pauseAutosave();
+    setBusy(true);
+    setModFiles([]);
+    setModScan(EMPTY_SCAN);
+    setSourcePacks([]);
+    setProject(createEmptyProjectPatch());
+    setActiveLocale("");
+    setActivePage("project");
+    setSettings(defaultSettings);
+    setReferenceLocale("en_us");
+    setReferenceFallbackLocale("");
+    setSelectedKey("");
+    setQuery("");
+    setManualDraft("");
+    setInlineDrafts({});
+    setLlmSettings(defaultLlmSettings);
+    setLlmWarnings([]);
+    setSourceLabels(defaultSourceLabels);
+
+    try {
+      await clearBrowserDraftStorage();
+      setStatus({ tone: "ok", text: "All app state and browser storage cleared." });
+    } catch (error) {
+      setStatus({ tone: "error", text: errorMessage(error) });
+    } finally {
+      resumeAutosave();
+      setBusy(false);
+    }
+  }
+
   async function runBusy(successText: string, work: () => Promise<void>) {
     setBusy(true);
     try {
@@ -810,7 +860,6 @@ function App() {
             resumeTranslationJob={resumeTranslationJob}
             stopTranslationJob={stopTranslationJob}
             clearLlmWarnings={() => setLlmWarnings([])}
-            clearLoadedJars={clearLoadedJars}
             exportProjectPatch={exportProjectPatch}
             exportResourcePack={exportResourcePack}
             exportPatchedJars={exportPatchedJars}
@@ -838,6 +887,10 @@ function App() {
             setProject={setProject}
             setStatus={setStatus}
             defaultLlmSettings={deploymentDefaults.llmSettings}
+            loadedJarCount={modScan.fingerprints.length}
+            clearLoadedJars={clearLoadedJars}
+            clearAllState={clearAllState}
+            stateResetDisabled={busy || translating}
           />
         ) : null}
 

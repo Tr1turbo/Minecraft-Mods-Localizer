@@ -44,6 +44,10 @@ export function SettingsPage({
   setProject,
   setStatus,
   defaultLlmSettings,
+  loadedJarCount,
+  clearLoadedJars,
+  clearAllState,
+  stateResetDisabled,
 }: {
   settings: AppSettings;
   setSettings: Dispatch<SetStateAction<AppSettings>>;
@@ -60,6 +64,10 @@ export function SettingsPage({
   setProject: Dispatch<SetStateAction<LangpackProjectPatch>>;
   setStatus: Dispatch<SetStateAction<StatusMessage>>;
   defaultLlmSettings: LlmSettings;
+  loadedJarCount: number;
+  clearLoadedJars: () => void;
+  clearAllState: () => void;
+  stateResetDisabled: boolean;
 }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [phraseQuery, setPhraseQuery] = useState("");
@@ -288,6 +296,24 @@ export function SettingsPage({
             />
           </div>
         </label>
+      </section>
+      <section className="panel settingsPanel">
+        <div className="panelHeader">
+          <h2>Browser storage</h2>
+          <div className="buttonRow compact">
+            <button type="button" className="danger" onClick={clearLoadedJars} disabled={loadedJarCount === 0 || stateResetDisabled}>
+              <Trash2 size={16} />
+              Clear loaded jars
+            </button>
+            <button type="button" className="danger" onClick={clearAllState} disabled={stateResetDisabled}>
+              <Trash2 size={16} />
+              Delete all state
+            </button>
+          </div>
+        </div>
+        <div className="targetHint">
+          {loadedJarCount.toLocaleString()} loaded jar(s). Clear loaded jars removes stored mod files and scan results; delete all state resets the app.
+        </div>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">

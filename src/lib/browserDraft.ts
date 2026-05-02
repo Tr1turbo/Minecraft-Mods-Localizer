@@ -77,6 +77,12 @@ export async function clearBrowserDraftModFiles(): Promise<void> {
   }
 }
 
+export async function clearBrowserDraftStorage(): Promise<void> {
+  removeLocalStorageSnapshot();
+  await clearDraftRecords();
+  await deleteDraftDatabase();
+}
+
 async function getDraftRecord<T>(key: string): Promise<T | null> {
   const database = await openDraftDatabase();
   try {
@@ -121,6 +127,41 @@ async function deleteDraftRecord(key: string): Promise<void> {
   }
 }
 
+async function clearDraftRecords(): Promise<void> {
+  try {
+    const database = await openDraftDatabase();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(DRAFT_STORE_NAME, "readwrite");
+        transaction.objectStore(DRAFT_STORE_NAME).clear();
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error ?? new Error("Could not clear browser draft storage."));
+        transaction.onabort = () => reject(transaction.error ?? new Error("Browser draft storage clear was aborted."));
+      });
+    } finally {
+      database.close();
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "IndexedDB is not available.") {
+      return;
+    }
+    throw error;
+  }
+}
+
+function deleteDraftDatabase(): Promise<void> {
+  if (typeof indexedDB === "undefined") {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DRAFT_DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error("Could not delete browser draft storage."));
+    request.onblocked = () => reject(new Error("Could not delete browser draft storage. Close other app tabs and try again."));
+  });
+}
+
 function openDraftDatabase(): Promise<IDBDatabase> {
   if (typeof indexedDB === "undefined") {
     return Promise.reject(new Error("IndexedDB is not available."));
@@ -156,4 +197,11 @@ function writeLocalStorageSnapshot<T>(draft: SavedBrowserDraftSnapshot<T>): void
     throw new Error("Browser storage is not available.");
   }
   localStorage.setItem(LOCAL_STORAGE_SNAPSHOT_KEY, JSON.stringify(draft));
+}
+
+function removeLocalStorageSnapshot(): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.removeItem(LOCAL_STORAGE_SNAPSHOT_KEY);
 }

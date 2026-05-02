@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Download, RotateCcw, Trash2, Wand2 } from "lucide-react";
+import { Download, Wand2 } from "lucide-react";
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { TranslationProgressPanel } from "../../components/TranslationProgressPanel";
 import { LlmWarningsPanel } from "../../components/LlmWarningsPanel";
@@ -27,7 +27,6 @@ export function ProjectPage({
   resumeTranslationJob,
   stopTranslationJob,
   clearLlmWarnings,
-  clearLoadedJars,
   exportProjectPatch,
   exportResourcePack,
   exportPatchedJars,
@@ -49,7 +48,6 @@ export function ProjectPage({
   resumeTranslationJob: () => void;
   stopTranslationJob: () => void;
   clearLlmWarnings: () => void;
-  clearLoadedJars: () => void;
   exportProjectPatch: () => void;
   exportResourcePack: () => void;
   exportPatchedJars: () => void;
@@ -193,10 +191,6 @@ export function ProjectPage({
             <button type="button" onClick={exportPatchedJars} disabled={rows.length === 0 || modCount === 0}>
               <Download size={16} />
               Export jars
-            </button>
-            <button type="button" className="danger" onClick={clearLoadedJars} disabled={modCount === 0 || translating}>
-              <Trash2 size={16} />
-              Clear loaded jars
             </button>
           </div>
         </div>

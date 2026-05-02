@@ -81,6 +81,7 @@ export function useBrowserDraftPersistence({
   const restoredManualDraftRef = useRef<{ entryId: EntryId; value: string } | null>(null);
   const draftSaveWarningShownRef = useRef(false);
   const lastSavedModFileKeyRef = useRef("");
+  const autosavePausedRef = useRef(false);
 
   const reportDraftSaveError = useCallback(
     (error: unknown) => {
@@ -95,6 +96,15 @@ export function useBrowserDraftPersistence({
 
   const resetSavedModFileKey = useCallback(() => {
     lastSavedModFileKeyRef.current = "";
+  }, []);
+
+  const pauseAutosave = useCallback(() => {
+    autosavePausedRef.current = true;
+    draftSaveWarningShownRef.current = false;
+  }, []);
+
+  const resumeAutosave = useCallback(() => {
+    autosavePausedRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -190,6 +200,9 @@ export function useBrowserDraftPersistence({
     if (!draftHydrated) {
       return;
     }
+    if (autosavePausedRef.current) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       void writeBrowserDraftSnapshot(draftState).catch(reportDraftSaveError);
     }, DRAFT_AUTOSAVE_DELAY_MS);
@@ -201,6 +214,9 @@ export function useBrowserDraftPersistence({
       return;
     }
     const saveNow = () => {
+      if (autosavePausedRef.current) {
+        return;
+      }
       void writeBrowserDraftSnapshot(draftState).catch(reportDraftSaveError);
     };
     const saveWhenHidden = () => {
@@ -225,6 +241,9 @@ export function useBrowserDraftPersistence({
       return;
     }
     lastSavedModFileKeyRef.current = fileKey;
+    if (autosavePausedRef.current) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       void writeBrowserDraftModFiles(modFiles).catch(reportDraftSaveError);
     }, DRAFT_AUTOSAVE_DELAY_MS);
@@ -245,7 +264,9 @@ export function useBrowserDraftPersistence({
 
   return {
     draftHydrated,
+    pauseAutosave,
     resetSavedModFileKey,
+    resumeAutosave,
     restoredManualDraftRef,
   };
 }
