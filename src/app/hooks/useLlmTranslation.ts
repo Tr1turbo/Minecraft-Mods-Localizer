@@ -1,12 +1,12 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 import {
   chunksByTargetLocale,
   delay,
   errorMessage,
   isAbortError,
+  nextAnimatedDraftText,
   removeDraft,
-  shouldAnimateSingleCandidate,
   TranslationStoppedError,
   upsertLiveOutput,
   waitForTranslationResume,
@@ -47,6 +47,15 @@ interface UseLlmTranslationOptions {
   setStatus: Dispatch<SetStateAction<StatusMessage>>;
 }
 
+const LLM_DRAFT_ANIMATION_MS = 18;
+const LLM_CANDIDATE_HOLD_MS = 250;
+
+interface LiveDraftAnimation {
+  target: string;
+  visible: string;
+  timer: number | null;
+}
+
 export function useLlmTranslation({
   project,
   setProject,
@@ -63,8 +72,37 @@ export function useLlmTranslation({
   const [llmWarnings, setLlmWarnings] = useState<string[]>([]);
   const translationControlRef = useRef<TranslationControl>({ paused: false, stopped: false, abortControllers: new Set() });
   const llmDisplayAnimationRef = useRef(0);
+  const liveDraftAnimationsRef = useRef<Map<EntryId, LiveDraftAnimation>>(new Map());
   const [loadingModels, setLoadingModels] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  function clearLiveDraftAnimation(id: EntryId): string {
+    const animation = liveDraftAnimationsRef.current.get(id);
+    if (!animation) {
+      return "";
+    }
+    if (animation.timer !== null) {
+      window.clearTimeout(animation.timer);
+    }
+    liveDraftAnimationsRef.current.delete(id);
+    return animation.visible;
+  }
+
+  function clearAllLiveDraftAnimations() {
+    for (const animation of liveDraftAnimationsRef.current.values()) {
+      if (animation.timer !== null) {
+        window.clearTimeout(animation.timer);
+      }
+    }
+    liveDraftAnimationsRef.current.clear();
+  }
+
+  useEffect(() => {
+    return () => {
+      clearAllLiveDraftAnimations();
+      llmDisplayAnimationRef.current += 1;
+    };
+  }, []);
 
   function pauseTranslationJob() {
     if (!translationProgress || translationProgress.status !== "running") {
@@ -94,6 +132,7 @@ export function useLlmTranslation({
     for (const abortController of control.abortControllers) {
       abortController.abort();
     }
+    clearAllLiveDraftAnimations();
     setTranslationProgress((current) => (current ? { ...current, status: "stopping", updatedAt: Date.now() } : current));
     setStatus({ tone: "warn", text: "Stopping LLM translation and clearing the queued job." });
   }
@@ -116,18 +155,20 @@ export function useLlmTranslation({
     }
   }
 
-  async function animateLlmCandidateValue(id: EntryId, value: string) {
+  async function animateLlmCandidateValue(id: EntryId, value: string, initialValue = "") {
     const token = llmDisplayAnimationRef.current + 1;
     llmDisplayAnimationRef.current = token;
-    const chars = Array.from(value);
-    for (let index = 1; index <= chars.length; index += 1) {
+    let visible = initialValue;
+    setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: visible }));
+    while (visible !== value) {
+      await delay(LLM_DRAFT_ANIMATION_MS);
       if (llmDisplayAnimationRef.current !== token) {
         return;
       }
-      setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: chars.slice(0, index).join("") }));
-      await delay(18);
+      visible = nextAnimatedDraftText(visible, value);
+      setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: visible }));
     }
-    await delay(250);
+    await delay(LLM_CANDIDATE_HOLD_MS);
     if (llmDisplayAnimationRef.current !== token) {
       return;
     }
@@ -143,6 +184,7 @@ export function useLlmTranslation({
       setStatus({ tone: "warn", text: "No translation jobs." });
       return;
     }
+    clearAllLiveDraftAnimations();
     const initialLiveOutputs =
       options.seedLiveOutput && jobs.length === 1
         ? [{ id: makeEntryId(jobs[0].namespace, jobs[0].targetLocale, jobs[0].key), text: "", updatedAt: Date.now() }]
@@ -165,7 +207,6 @@ export function useLlmTranslation({
     await yieldToBrowser();
     let completed = 0;
     const completedIds = new Set<EntryId>();
-    const draftHistory = new Map<EntryId, string[]>();
     const warnings: string[] = [];
     try {
       let nextProject = project;
@@ -177,8 +218,7 @@ export function useLlmTranslation({
         setTranslationProgress((current) => (current ? update(current) : current));
       }
 
-      function updateLiveOutput(id: EntryId, text: string) {
-        draftHistory.set(id, [...(draftHistory.get(id) ?? []), text]);
+      function setLiveOutputText(id: EntryId, text: string) {
         updateProgress((current) => ({
           ...current,
           updatedAt: Date.now(),
@@ -186,7 +226,40 @@ export function useLlmTranslation({
         }));
       }
 
+      function scheduleLiveOutputAnimation(id: EntryId) {
+        const animation = liveDraftAnimationsRef.current.get(id);
+        if (!animation || animation.timer !== null || animation.visible === animation.target) {
+          return;
+        }
+        animation.timer = window.setTimeout(() => {
+          const currentAnimation = liveDraftAnimationsRef.current.get(id);
+          if (!currentAnimation) {
+            return;
+          }
+          currentAnimation.timer = null;
+          if (control.stopped || completedIds.has(id)) {
+            clearLiveDraftAnimation(id);
+            return;
+          }
+          currentAnimation.visible = nextAnimatedDraftText(currentAnimation.visible, currentAnimation.target);
+          setLiveOutputText(id, currentAnimation.visible);
+          scheduleLiveOutputAnimation(id);
+        }, LLM_DRAFT_ANIMATION_MS);
+      }
+
+      function updateLiveOutput(id: EntryId, text: string) {
+        const animation = liveDraftAnimationsRef.current.get(id);
+        if (animation) {
+          animation.target = text;
+        } else {
+          liveDraftAnimationsRef.current.set(id, { target: text, visible: "", timer: null });
+          setLiveOutputText(id, "");
+        }
+        scheduleLiveOutputAnimation(id);
+      }
+
       function removeLiveOutput(id: EntryId) {
+        clearLiveDraftAnimation(id);
         updateProgress((current) => ({
           ...current,
           updatedAt: Date.now(),
@@ -200,6 +273,7 @@ export function useLlmTranslation({
           return;
         }
         completedIds.add(id);
+        clearLiveDraftAnimation(id);
         completed = completedIds.size;
         updateProgress((current) => ({
           ...current,
@@ -241,11 +315,12 @@ export function useLlmTranslation({
               convertSources: settings.convertSources,
               onDraft: (id, text) => updateLiveOutput(id, text),
               onPatch: (id, patch) => {
+                const candidateSeed = options.animateSingleCandidate ? clearLiveDraftAnimation(id) : "";
+                if (options.animateSingleCandidate) {
+                  void animateLlmCandidateValue(id, patch.value, candidateSeed);
+                }
                 nextProject = mergeLlmPatches(nextProject, { [id]: patch });
                 setProject(nextProject);
-                if (options.animateSingleCandidate && shouldAnimateSingleCandidate(draftHistory.get(id), patch.value)) {
-                  void animateLlmCandidateValue(id, patch.value);
-                }
               },
               onWarning: addWarning,
               onItemComplete: finishItem,
@@ -284,6 +359,7 @@ export function useLlmTranslation({
         setStatus({ tone: "error", text: errorMessage(error) });
       }
     } finally {
+      clearAllLiveDraftAnimations();
       translationControlRef.current = { paused: false, stopped: false, abortControllers: new Set() };
       setTranslating(false);
       setTranslationProgress(null);

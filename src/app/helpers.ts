@@ -332,11 +332,26 @@ export function upsertLiveOutput(outputs: LlmLiveOutput[], next: LlmLiveOutput):
   return [next, ...filtered];
 }
 
-export function shouldAnimateSingleCandidate(drafts: string[] | undefined, value: string): boolean {
-  if (!value) {
-    return false;
+export function nextAnimatedDraftText(visibleText: string, targetText: string): string {
+  if (visibleText === targetText) {
+    return visibleText;
   }
-  return !(drafts ?? []).some((draft) => draft.length > 0 && draft.length < value.length);
+  if (!targetText) {
+    return "";
+  }
+
+  const visibleChars = Array.from(visibleText);
+  const targetChars = Array.from(targetText);
+  let matchingChars = 0;
+  while (
+    matchingChars < visibleChars.length &&
+    matchingChars < targetChars.length &&
+    visibleChars[matchingChars] === targetChars[matchingChars]
+  ) {
+    matchingChars += 1;
+  }
+
+  return targetChars.slice(0, Math.min(matchingChars + 1, targetChars.length)).join("");
 }
 
 export class TranslationStoppedError extends Error {
