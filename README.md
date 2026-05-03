@@ -1,68 +1,142 @@
 # Minecraft Mods Localizer
 
-A local-first web app for translating Minecraft mod language files.
+Language: English | [繁體中文](README.zh-TW.md)
 
-Load mod `.jar` files and optional resource packs, choose target Minecraft locales, review the detected language keys, edit missing or incorrect translations, and export either a normal resource pack or patched copies of the loaded jars. The bundled Minecraft `minecraft/lang/` files are shown as a built-in `minecraft` namespace demo, so the app has editable rows before any mod jars are loaded. The app runs in the browser, so selected files stay on your machine unless you explicitly use the optional LLM translation feature.
+Minecraft Mods Localizer is a browser-based tool for translating Minecraft mod language files. It reads the `assets/<namespace>/lang/*.json` files inside mod jars and resource packs, shows every detected translation key in an editable workspace, and exports the finished work as a resource pack or patched jar copies.
 
-## What It Does
+Use the hosted app here:
 
-- Reads `assets/<namespace>/lang/*.json` files from Minecraft mod jars and resource packs.
-- Shows bundled vanilla Minecraft locale files as a read-only `minecraft` namespace source that can be overridden in exported resource packs.
-- Supports user-selected Minecraft target locales. When no target locale is selected, the editor uses `en_us`.
-- Uses configurable fallback/source locale priority; `en_us` is only a default source-priority entry, not the only possible source.
-- Applies Chinese conversion when both fallback and target locales are Chinese variants.
-- Lets you manually patch individual entries and save the work as a project patch file.
-- Uses Minecraft locale files from `minecraft/lang/` as read-only reference data.
-- Uses curated terminology from `data/curatedGlossary.json` to keep translations consistent.
-- Can export a resource pack zip or patched jar copies without modifying the original local jars.
-- Supports optional OpenAI-compatible LLM translation from the Settings page.
+https://mc-localizer.triturbo.dev
 
-## Project Layout
+This is a static web app. It is built with Vite and React, runs in the browser, and does not require a backend server for normal use.
 
-```text
-.
-├── data/
-│   └── curatedGlossary.json
-├── minecraft/
-│   └── lang/
-│       ├── en_us.json
-│       ├── zh_cn.json
-│       ├── zh_hk.json
-│       ├── zh_tw.json
-│       └── ...
-├── src/
-├── test/
-├── index.html
-├── package.json
-└── vite.config.ts
+## Why This Exists
+
+Minecraft mods often ship with incomplete, inconsistent, or missing translations. Translating them by hand usually means unpacking jars, comparing locale JSON files, tracking fallback values manually, and rebuilding packs without accidentally damaging the original files.
+
+Minecraft Mods Localizer turns that process into a review workflow:
+
+- Load one or more mod `.jar` files.
+- Optionally load existing resource packs as translation sources.
+- Choose the Minecraft locales you want to produce.
+- Compare source, fallback, vanilla, manual, converted, and LLM-generated values.
+- Edit individual keys directly in the browser.
+- Save your work as a reusable project patch.
+- Export a resource pack zip or patched jar copies when you are done.
+
+The original mod jars are not modified.
+
+## Key Features
+
+- **Jar and resource-pack scanning**: Reads Minecraft language JSON files from local jars and resource packs.
+- **Namespace-based review**: Groups entries by namespace so each mod can be reviewed separately.
+- **Locale fallback chains**: Uses configurable fallback/source locale priority when a target locale is missing.
+- **Bundled vanilla references**: Includes Minecraft locale files under the `minecraft` namespace as read-only reference data.
+- **Manual patching**: Lets you override individual translation values and save them in a project patch file.
+- **Project restore**: Browser draft storage can restore in-progress work locally.
+- **Glossary hints**: Shows matched terminology in the editor and uses those hints to guide LLM translation and OpenCC Chinese conversion.
+- **Chinese locale conversion with OpenCC**: Uses `opencc-js` to convert between Simplified Chinese, Taiwan Traditional Chinese, and Hong Kong Traditional Chinese.
+- **Optional LLM translation**: Can call an OpenAI-compatible chat-completions endpoint from the browser.
+- **Export options**: Generates a normal resource pack zip or patched jar copies without changing the originals.
+
+## Privacy And API Key Disclaimer
+
+This project is designed to be local-first.
+
+- Selected mod jars and resource packs are read by your browser.
+- Project patches, resource packs, and patched jar copies are generated in your browser and downloaded locally.
+- The hosted static app does not upload your files to a server for scanning, editing, or exporting.
+- If you use the optional LLM translation feature, the selected source strings are sent directly from your browser to the API endpoint you configure.
+- We do not collect, store, or log your API key.
+- The API key is used only in your browser for requests to the configured OpenAI-compatible endpoint.
+- The API key is not written to exported project patch files.
+- Your LLM provider may receive request data according to that provider's own terms and logging policies.
+
+Only enter an API key on a deployment you trust. If you prefer full control over the served application, clone this repository and deploy your own copy.
+
+## Hosted App
+
+The public deployment is available at:
+
+[https://mc-localizer.triturbo.dev](https://mc-localizer.triturbo.dev)
+
+Because the app is static, the hosted version is just the built frontend files served from a web host. There is no application backend required for the translation editor itself.
+
+## Self-Hosting
+
+You can clone the repository, build the static files, and deploy them to any static hosting provider.
+
+```bash
+git clone https://github.com/Tr1turbo/Minecraft-Mods-Localizer.git
+cd Minecraft-Mods-Localizer
+npm install
+npm run build
 ```
 
-`minecraft/lang/` contains third-party Minecraft locale files used by the app at build time. These files are not covered by this project's MIT license; see `THIRD_PARTY_NOTICES.md` and `minecraft/README.md`.
+The production site is written to `dist/`.
 
-`data/curatedGlossary.json` contains the hand-maintained Glossary entries shown in Settings. Project-specific terminology changes are stored in exported project patch files.
+The Vite build uses relative asset paths, so `dist/` can be hosted from a domain root or a project subpath. Typical targets include Cloudflare Pages, GitHub Pages, Netlify, Vercel static output, S3-compatible object storage, or a simple static file server.
 
-`test/` contains the Vitest unit tests. Runtime app code stays under `src/`.
-
-## Development
+## Local Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/`.
+Open:
 
-## Build
-
-```bash
-npm run build
+```text
+http://127.0.0.1:5173/
 ```
 
-The static site is written to `dist/`. The Vite build uses relative asset paths, so the same output can be hosted from a GitHub Pages project path or from a site root.
+Run tests with:
 
-## Deployment Config
+```bash
+npm test
+```
 
-Runtime defaults are loaded from `app-config.json` next to the deployed `index.html`. Vite copies the tracked default from `public/app-config.json` into `dist/` during build. The file is public, so do not put API keys in it.
+## How It Works
+
+The app uses browser file APIs to read local files selected by the user. Mod jars and resource packs are inspected for Minecraft language files under paths like:
+
+```text
+assets/<namespace>/lang/en_us.json
+assets/<namespace>/lang/zh_tw.json
+assets/<namespace>/lang/ja_jp.json
+```
+
+Detected entries are merged into a catalog. For each target locale, the app decides whether the final value comes from an existing jar value, an imported resource pack, a configured fallback locale, a Chinese conversion result, an LLM candidate, or a manual patch.
+
+### Glossary Hints
+
+When a key or source value matches known Minecraft terminology, the editor shows glossary hints beside the selected entry. These hints help manual review, are included in LLM translation prompts, and are also used as a custom dictionary for Chinese conversion where possible.
+
+### Chinese Conversion
+
+Chinese locale conversion is powered by [`opencc-js`](https://github.com/nk2028/opencc-js). When the app has a Chinese source value and the target locale is another supported Chinese variant, it can generate a converted value automatically.
+
+Supported conversion targets:
+
+- `zh_cn`: Simplified Chinese, using OpenCC `cn`
+- `zh_tw`: Taiwan Traditional Chinese, using OpenCC `twp`
+- `zh_hk`: Hong Kong Traditional Chinese, using OpenCC `hk`
+
+For example, if a mod already has `zh_cn` strings and you are building `zh_tw`, the app can convert the source text with OpenCC and label the result as `Converted`. The conversion also uses the app glossary as a custom OpenCC dictionary where possible, so Minecraft and mod terminology can stay consistent across Chinese locales.
+
+Exports are generated from that catalog:
+
+- **Resource pack export** creates a zip containing translated `assets/<namespace>/lang/*.json` files.
+- **Patched jar export** creates downloadable jar copies with patched locale files.
+- **Project patch export** saves your manual edits, LLM candidates, glossary overrides, and settings so the work can be resumed later.
+
+## Deployment Configuration
+
+Runtime defaults are loaded from `app-config.json` next to the deployed `index.html`. Vite copies the tracked default from `public/app-config.json` into `dist/` during build.
+
+`app-config.json` is public, so do not put API keys in it.
+
+Example:
 
 ```json
 {
@@ -72,8 +146,6 @@ Runtime defaults are loaded from `app-config.json` next to the deployed `index.h
     "model": "gpt-5.4-mini"
   },
   "app": {
-    "targetLocales": [],
-    "fallbackChains": {},
     "packFormat": 34,
     "description": "Generated by Minecraft Mods Localizer",
     "llmBatchSize": 40,
@@ -83,27 +155,39 @@ Runtime defaults are loaded from `app-config.json` next to the deployed `index.h
 }
 ```
 
-Deployment config seeds first-run defaults only. After a user changes Settings, the browser draft takes precedence. For private endpoint testing, use the Settings page or a local uncommitted `app-config.json`.
+Deployment config seeds first-run defaults only. After a user changes settings in the app, the browser draft takes precedence.
 
-Each target locale fallback chain includes `en_us` by default. Chinese targets also get built-in cross-locale defaults: `zh_tw` uses `zh_hk`, `zh_cn`, `en_us`; `zh_cn` uses `zh_hk`, `zh_tw`, `en_us`; and `zh_hk` uses `zh_tw`, `zh_cn`, `en_us`. LLM source values can start from `en_us`, the configured fallback value, or all valid loaded values.
+## Project Layout
 
-`sourceLabels` can also override each source badge's `label`, `background`, `text`, and `stripe` color for `vanilla`, `jar`, `resourcePack`, `converted`, `llm`, `manual`, `fallback`, and `missing`.
-
-## Test
-
-```bash
-npm test
+```text
+.
+├── data/
+│   └── curatedGlossary.json
+├── minecraft/
+│   └── lang/
+├── public/
+│   ├── app-config.json
+│   └── assets/
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   └── lib/
+├── test/
+├── index.html
+├── package.json
+└── vite.config.ts
 ```
 
-## Privacy
+- `src/lib/` contains framework-independent domain logic for scanning, patching, exporting, locale handling, glossary matching, LLM calls, and deployment config.
+- `src/features/` contains page and workflow UI.
+- `src/components/` contains shared React UI components.
+- `data/curatedGlossary.json` contains the built-in glossary.
+- `minecraft/lang/` contains third-party Minecraft locale files used as read-only reference data.
+- `test/` contains Vitest unit tests.
 
-- Mod jars and resource packs are read from files selected in the browser.
-- Project patches, resource-pack zips, and patched jar copies are generated locally and downloaded by the browser.
-- Original mod jars are not changed.
-- LLM translation sends selected strings only to the configured OpenAI-compatible endpoint.
-
-## License
+## Third-Party Notices
 
 Project-owned code and documentation are MIT licensed. Copyright (c) 2026 Triturbo.
 
-Third-party Minecraft locale files under `minecraft/lang/` are not covered by the MIT license. See `THIRD_PARTY_NOTICES.md`.
+Minecraft locale files under `minecraft/lang/` are third-party reference data and are not covered by this project's MIT license. Minecraft and related assets are owned by Mojang and Microsoft and are subject to their own terms. See `THIRD_PARTY_NOTICES.md` and `minecraft/README.md`.
