@@ -1,4 +1,4 @@
-import { placeholdersMatch } from "./placeholders";
+import { protectedTokensMatch } from "./placeholders";
 import { createPatchValue, resolveBaseValue } from "./patches";
 import { DEFAULT_RUNTIME_PHRASE_MAPPINGS, selectPhraseGlossary } from "./phraseMappings";
 import { isChineseLocale } from "./locales";
@@ -53,6 +53,7 @@ export interface LlmRequestOptions {
   signal?: AbortSignal;
   fallbackChains?: LocaleFallbacks;
   convertSources?: ConvertSourceSettings;
+  warnFormattingCodeMismatch?: boolean;
   onDraft?: (id: EntryId, text: string) => void | Promise<void>;
   onPatch?: (id: EntryId, patch: PatchValue) => void | Promise<void>;
   onWarning?: (warning: string) => void | Promise<void>;
@@ -420,9 +421,12 @@ async function processPromptTranslation(state: LlmTranslationState, promptJob: P
     await addWarning(state, `${entryId}: missing LLM translation`, entryId);
     return;
   }
-  if (!placeholdersMatch(job.sourceText, translated)) {
-    await addWarning(state, `${entryId}: rejected LLM translation because placeholders changed`, entryId);
+  if (!protectedTokensMatch(job.sourceText, translated)) {
+    await addWarning(state, `${entryId}: rejected LLM translation because protected tokens changed`, entryId);
     return;
+  }
+  if (state.options.warnFormattingCodeMismatch && !protectedTokensMatch(job.sourceText, translated, { includeFormattingCodes: true })) {
+    await addWarning(state, `${entryId}: LLM translation changed formatting codes`);
   }
 
   const parent = resolveBaseValue(

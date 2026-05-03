@@ -332,26 +332,58 @@ export function upsertLiveOutput(outputs: LlmLiveOutput[], next: LlmLiveOutput):
   return [next, ...filtered];
 }
 
-export function nextAnimatedDraftText(visibleText: string, targetText: string): string {
-  if (visibleText === targetText) {
-    return visibleText;
+export function draftAnimationDurationMs(charCount: number, options: { complete?: boolean } = {}): number {
+  const baseMs = 10;
+  if (options.complete) {
+    return baseMs;
+  }
+  return baseMs + Math.ceil(Math.max(0, charCount) / 2);
+}
+
+export function draftTargetDeltaCharCount(previousTargetText: string, targetText: string): number {
+  const previousChars = Array.from(previousTargetText);
+  const targetChars = Array.from(targetText);
+  const matchingChars = matchingPrefixCharCount(previousChars, targetChars);
+  return Math.max(0, targetChars.length - matchingChars);
+}
+
+export function animatedDraftTextAtElapsed(startText: string, targetText: string, elapsedMs: number, durationMs: number): string {
+  if (startText === targetText) {
+    return targetText;
   }
   if (!targetText) {
     return "";
   }
+  if (elapsedMs <= 0) {
+    return startText;
+  }
+  if (durationMs <= 0 || elapsedMs >= durationMs) {
+    return targetText;
+  }
 
-  const visibleChars = Array.from(visibleText);
+  const startChars = Array.from(startText);
   const targetChars = Array.from(targetText);
+  const matchingChars = matchingPrefixCharCount(startChars, targetChars);
+  if (targetChars.length <= matchingChars) {
+    return targetText;
+  }
+
+  const changingChars = targetChars.length - matchingChars;
+  const progress = Math.min(1, Math.max(0, elapsedMs / durationMs));
+  const visibleChangingChars = Math.max(1, Math.ceil(changingChars * progress));
+  return targetChars.slice(0, matchingChars + visibleChangingChars).join("");
+}
+
+function matchingPrefixCharCount(left: readonly string[], right: readonly string[]): number {
   let matchingChars = 0;
   while (
-    matchingChars < visibleChars.length &&
-    matchingChars < targetChars.length &&
-    visibleChars[matchingChars] === targetChars[matchingChars]
+    matchingChars < left.length &&
+    matchingChars < right.length &&
+    left[matchingChars] === right[matchingChars]
   ) {
     matchingChars += 1;
   }
-
-  return targetChars.slice(0, Math.min(matchingChars + 1, targetChars.length)).join("");
+  return matchingChars;
 }
 
 export class TranslationStoppedError extends Error {

@@ -94,7 +94,52 @@ describe("llm", () => {
     );
 
     expect(result.patches[id]).toBeUndefined();
-    expect(result.warnings[0]).toContain("placeholders changed");
+    expect(result.warnings[0]).toContain("protected tokens changed");
+  });
+
+  it("allows LLM translations to change formatting codes by default", async () => {
+    const id = makeEntryId("create", "zh_tw", "item.create.gold");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ "item.create.gold": "黃金" }));
+    const mods: TranslationMap = {
+      create: {
+        en_us: {
+          "item.create.gold": "§6Gold",
+        },
+      },
+    };
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "item.create.gold", sourceText: "§6Gold" })],
+      mods,
+      [],
+    );
+
+    expect(result.warnings).toEqual([]);
+    expect(result.patches[id].value).toBe("黃金");
+  });
+
+  it("warns about formatting code changes when formatting mismatch warnings are enabled", async () => {
+    const id = makeEntryId("create", "zh_tw", "item.create.gold");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ "item.create.gold": "黃金" }));
+    const mods: TranslationMap = {
+      create: {
+        en_us: {
+          "item.create.gold": "§6Gold",
+        },
+      },
+    };
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "test-key", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "item.create.gold", sourceText: "§6Gold" })],
+      mods,
+      [],
+      { warnFormattingCodeMismatch: true },
+    );
+
+    expect(result.patches[id].value).toBe("黃金");
+    expect(result.warnings[0]).toContain("formatting codes");
   });
 
   it("creates patches for valid translations", async () => {

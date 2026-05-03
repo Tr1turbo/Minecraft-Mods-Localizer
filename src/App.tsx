@@ -41,7 +41,7 @@ import { SettingsPage } from "./features/settings/SettingsPage";
 import { SourcesPage } from "./features/sources/SourcesPage";
 import { createResourcePackZip } from "./lib/exportPack";
 import { createPatchedJarDownload } from "./lib/exportJars";
-import { placeholderWarnings } from "./lib/placeholders";
+import { protectedTokenWarnings } from "./lib/placeholders";
 import {
   effectivePhraseMappings,
   phraseMappingsWithInternalVanilla,
@@ -188,7 +188,11 @@ function App() {
   );
   const selectedRow = filteredRows.find((row) => rowId(row) === selectedKey) ?? filteredRows[0];
   const selectedEntry = activeLocale ? selectedRow?.entries[activeLocale] : undefined;
-  const manualWarnings = selectedEntry ? placeholderWarnings(selectedEntry.sourceValue, manualDraft) : [];
+  const manualWarnings = selectedEntry
+    ? protectedTokenWarnings(selectedEntry.sourceValue, manualDraft, {
+        includeFormattingCodes: settings.warnFormattingCodeMismatch,
+      })
+    : [];
   const manualDiffSegments = useMemo(
     () => diffTextAgainstBase(selectedEntry?.base.value ?? "", manualDraft),
     [manualDraft, selectedEntry?.base.value],
@@ -506,7 +510,9 @@ function App() {
       },
     }));
     setInlineDrafts((current) => removeDraft(current, entry.id));
-    const warnings = placeholderWarnings(entry.sourceValue, value);
+    const warnings = protectedTokenWarnings(entry.sourceValue, value, {
+      includeFormattingCodes: settings.warnFormattingCodeMismatch,
+    });
     setStatus({
       tone: warnings.length ? "warn" : "ok",
       text: warnings.length ? `Manual patch saved with warning: ${warnings[0]}` : options.quiet ? "Inline edit saved." : "Manual patch saved.",

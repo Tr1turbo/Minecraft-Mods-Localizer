@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 import {
+  animatedDraftTextAtElapsed,
   chunksByTargetLocale,
   delay,
+  draftAnimationDurationMs,
+  draftTargetDeltaCharCount,
   errorMessage,
   isAbortError,
-  nextAnimatedDraftText,
   removeDraft,
   TranslationStoppedError,
   upsertLiveOutput,
@@ -47,13 +49,19 @@ interface UseLlmTranslationOptions {
   setStatus: Dispatch<SetStateAction<StatusMessage>>;
 }
 
-const LLM_DRAFT_ANIMATION_MS = 18;
 const LLM_CANDIDATE_HOLD_MS = 250;
 
 interface LiveDraftAnimation {
+  from: string;
   target: string;
   visible: string;
-  timer: number | null;
+  startedAt: number;
+  durationMs: number;
+  frame: number | null;
+}
+
+function nextAnimationFrame(): Promise<number> {
+  return new Promise((resolve) => window.requestAnimationFrame(resolve));
 }
 
 export function useLlmTranslation({
@@ -81,8 +89,8 @@ export function useLlmTranslation({
     if (!animation) {
       return "";
     }
-    if (animation.timer !== null) {
-      window.clearTimeout(animation.timer);
+    if (animation.frame !== null) {
+      window.cancelAnimationFrame(animation.frame);
     }
     liveDraftAnimationsRef.current.delete(id);
     return animation.visible;
@@ -90,8 +98,8 @@ export function useLlmTranslation({
 
   function clearAllLiveDraftAnimations() {
     for (const animation of liveDraftAnimationsRef.current.values()) {
-      if (animation.timer !== null) {
-        window.clearTimeout(animation.timer);
+      if (animation.frame !== null) {
+        window.cancelAnimationFrame(animation.frame);
       }
     }
     liveDraftAnimationsRef.current.clear();
@@ -158,14 +166,16 @@ export function useLlmTranslation({
   async function animateLlmCandidateValue(id: EntryId, value: string, initialValue = "") {
     const token = llmDisplayAnimationRef.current + 1;
     llmDisplayAnimationRef.current = token;
+    const startedAt = window.performance.now();
+    const durationMs = draftAnimationDurationMs(draftTargetDeltaCharCount(initialValue, value), { complete: true });
     let visible = initialValue;
     setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: visible }));
     while (visible !== value) {
-      await delay(LLM_DRAFT_ANIMATION_MS);
+      const timestamp = await nextAnimationFrame();
       if (llmDisplayAnimationRef.current !== token) {
         return;
       }
-      visible = nextAnimatedDraftText(visible, value);
+      visible = animatedDraftTextAtElapsed(initialValue, value, timestamp - startedAt, durationMs);
       setLlmCandidateDisplayDrafts((current) => ({ ...current, [id]: visible }));
     }
     await delay(LLM_CANDIDATE_HOLD_MS);
@@ -228,32 +238,55 @@ export function useLlmTranslation({
 
       function scheduleLiveOutputAnimation(id: EntryId) {
         const animation = liveDraftAnimationsRef.current.get(id);
-        if (!animation || animation.timer !== null || animation.visible === animation.target) {
+        if (!animation || animation.frame !== null || animation.visible === animation.target) {
           return;
         }
-        animation.timer = window.setTimeout(() => {
+        animation.frame = window.requestAnimationFrame((timestamp) => {
           const currentAnimation = liveDraftAnimationsRef.current.get(id);
           if (!currentAnimation) {
             return;
           }
-          currentAnimation.timer = null;
+          currentAnimation.frame = null;
           if (control.stopped || completedIds.has(id)) {
             clearLiveDraftAnimation(id);
             return;
           }
-          currentAnimation.visible = nextAnimatedDraftText(currentAnimation.visible, currentAnimation.target);
+          currentAnimation.visible = animatedDraftTextAtElapsed(
+            currentAnimation.from,
+            currentAnimation.target,
+            timestamp - currentAnimation.startedAt,
+            currentAnimation.durationMs,
+          );
           setLiveOutputText(id, currentAnimation.visible);
           scheduleLiveOutputAnimation(id);
-        }, LLM_DRAFT_ANIMATION_MS);
+        });
       }
 
       function updateLiveOutput(id: EntryId, text: string) {
         const animation = liveDraftAnimationsRef.current.get(id);
+        const visible = animation?.visible ?? "";
+        if (animation?.frame != null) {
+          window.cancelAnimationFrame(animation.frame);
+        }
+        const previousTarget = animation?.target ?? visible;
+        const startedAt = window.performance.now();
+        const durationMs = draftAnimationDurationMs(draftTargetDeltaCharCount(previousTarget, text));
         if (animation) {
+          animation.from = visible;
           animation.target = text;
+          animation.startedAt = startedAt;
+          animation.durationMs = durationMs;
+          animation.frame = null;
         } else {
-          liveDraftAnimationsRef.current.set(id, { target: text, visible: "", timer: null });
-          setLiveOutputText(id, "");
+          liveDraftAnimationsRef.current.set(id, {
+            from: visible,
+            target: text,
+            visible,
+            startedAt,
+            durationMs,
+            frame: null,
+          });
+          setLiveOutputText(id, visible);
         }
         scheduleLiveOutputAnimation(id);
       }
@@ -313,6 +346,7 @@ export function useLlmTranslation({
               signal: abortController.signal,
               fallbackChains: settings.fallbackChains,
               convertSources: settings.convertSources,
+              warnFormattingCodeMismatch: settings.warnFormattingCodeMismatch,
               onDraft: (id, text) => updateLiveOutput(id, text),
               onPatch: (id, patch) => {
                 const candidateSeed = options.animateSingleCandidate ? clearLiveDraftAnimation(id) : "";

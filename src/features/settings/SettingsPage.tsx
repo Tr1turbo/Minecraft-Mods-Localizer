@@ -297,6 +297,19 @@ export function SettingsPage({
             />
           </div>
         </label>
+        <label className="checkboxControl">
+          <input
+            type="checkbox"
+            checked={settings.warnFormattingCodeMismatch}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                warnFormattingCodeMismatch: event.target.checked,
+              }))
+            }
+          />
+          Warn on formatting code mismatches
+        </label>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">

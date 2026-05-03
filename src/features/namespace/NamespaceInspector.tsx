@@ -8,6 +8,7 @@ import { PatchTextEditor } from "./PatchTextEditor";
 import { PhraseMatchesPanel } from "./PhraseMatchesPanel";
 import { ReferenceValueBlock } from "./ReferenceValueBlock";
 import { ValueBlock } from "./ValueBlock";
+import { MinecraftFormattedText } from "./MinecraftFormattedText";
 
 interface NamespaceInspectorProps {
   selectedEntry: ResolvedEntry | undefined;
@@ -123,7 +124,9 @@ export function NamespaceInspector({
           <h2>Final Output</h2>
           <SourceBadge source={selectedEntry.final.source} />
         </div>
-        <pre>{selectedEntry.final.value}</pre>
+        <pre className="minecraftFormattedOutput" aria-label={selectedEntry.final.value || "None"}>
+          <MinecraftFormattedText value={selectedEntry.final.value} />
+        </pre>
       </section>
     </>
   );

@@ -20,6 +20,7 @@ describe("deployment config", () => {
     expect(defaults.llmSettings.model).toBe("gpt-5.4-mini");
     expect(defaults.settings.targetLocales).toEqual([]);
     expect(defaults.settings.llmReferenceMode).toBe("en_us");
+    expect(defaults.settings.warnFormattingCodeMismatch).toBe(false);
   });
 
   it("normalizes partial openai_api, app, and source label config", () => {
@@ -37,6 +38,7 @@ describe("deployment config", () => {
         llmBatchSize: 24,
         llmConcurrency: 4,
         llmReferenceMode: "fallback",
+        warnFormattingCodeMismatch: true,
       },
       sourceLabels: {
         jar: {
@@ -58,6 +60,7 @@ describe("deployment config", () => {
       llmBatchSize: 24,
       llmConcurrency: 4,
       llmReferenceMode: "fallback",
+      warnFormattingCodeMismatch: true,
     });
     expect(normalized.sourceLabels.jar).toMatchObject({
       label: "Mod JAR",

@@ -42,6 +42,7 @@ export interface AppSettings {
   llmBatchSize: number;
   llmConcurrency: number;
   llmReferenceMode: LlmReferenceMode;
+  warnFormattingCodeMismatch: boolean;
   targetLocales: LocaleCode[];
   fallbackChains: LocaleFallbacks;
   translateSourceTargets: Record<SourceKind, boolean>;
@@ -79,6 +80,7 @@ export function createDefaultAppSettings(): AppSettings {
     llmBatchSize: 40,
     llmConcurrency: 3,
     llmReferenceMode: "en_us",
+    warnFormattingCodeMismatch: false,
     targetLocales: [],
     fallbackChains: {},
     convertSources: { ...DEFAULT_CONVERT_SOURCE_SETTINGS },
@@ -228,6 +230,9 @@ function normalizeAppSettings(raw: unknown, base: AppSettings): AppSettings {
   });
   if (isLlmReferenceMode(raw.llmReferenceMode)) {
     next.llmReferenceMode = raw.llmReferenceMode;
+  }
+  if (typeof raw.warnFormattingCodeMismatch === "boolean") {
+    next.warnFormattingCodeMismatch = raw.warnFormattingCodeMismatch;
   }
 
   if (Array.isArray(raw.targetLocales)) {
