@@ -66,7 +66,8 @@ import type {
   ResolvedEntry,
   SourcePackScanResult,
 } from "./lib/types";
-import { normalizeLocaleCode } from "./lib/locales";
+import { effectiveTargetLocales, normalizeLocaleCode } from "./lib/locales";
+import { compareNamespaceNames } from "./lib/vanilla";
 import { type LlmSettings } from "./lib/llm";
 import {
   type AppSettings,
@@ -135,6 +136,7 @@ function App() {
     llmSettings,
     setStatus,
   });
+  const targetLocales = useMemo(() => effectiveTargetLocales(settings.targetLocales), [settings.targetLocales]);
   const rows = useMemo(
     () =>
       buildCatalog(
@@ -144,7 +146,7 @@ function App() {
         settings.fallbackChains,
         runtimeGlossary,
         settings.convertSources,
-        settings.targetLocales,
+        targetLocales,
       ),
     [
       modScan.translations,
@@ -153,10 +155,10 @@ function App() {
       settings.fallbackChains,
       runtimeGlossary,
       settings.convertSources,
-      settings.targetLocales,
+      targetLocales,
     ],
   );
-  const namespaces = useMemo(() => Array.from(new Set(rows.map((row) => row.namespace))).sort(), [rows]);
+  const namespaces = useMemo(() => Array.from(new Set(rows.map((row) => row.namespace))).sort(compareNamespaceNames), [rows]);
   const activeNamespace = activePage.startsWith("namespace:") ? activePage.slice("namespace:".length) : "";
   const filteredRows = useMemo(
     () =>
@@ -299,28 +301,16 @@ function App() {
   }, [activeNamespace, activePage, namespaces]);
 
   useEffect(() => {
-    if (settings.targetLocales.length === 0) {
-      if (activeLocale) {
-        setActiveLocale("");
-      }
-      return;
+    if (!targetLocales.includes(activeLocale)) {
+      setActiveLocale(targetLocales[0]);
     }
-    if (!settings.targetLocales.includes(activeLocale)) {
-      setActiveLocale(settings.targetLocales[0]);
-    }
-  }, [activeLocale, settings.targetLocales]);
+  }, [activeLocale, targetLocales]);
 
   useEffect(() => {
-    if (settings.targetLocales.length === 0) {
-      if (referenceFallbackLocale) {
-        setReferenceFallbackLocale("");
-      }
-      return;
+    if (!targetLocales.includes(referenceFallbackLocale)) {
+      setReferenceFallbackLocale(activeLocale && targetLocales.includes(activeLocale) ? activeLocale : targetLocales[0]);
     }
-    if (!settings.targetLocales.includes(referenceFallbackLocale)) {
-      setReferenceFallbackLocale(activeLocale && settings.targetLocales.includes(activeLocale) ? activeLocale : settings.targetLocales[0]);
-    }
-  }, [activeLocale, referenceFallbackLocale, settings.targetLocales]);
+  }, [activeLocale, referenceFallbackLocale, targetLocales]);
 
   useEffect(() => {
     if (!activePage.startsWith("namespace:")) {
@@ -576,7 +566,7 @@ function App() {
     const exportProject: LangpackProjectPatch = {
       ...project,
       schemaVersion: 3,
-      locales: [...settings.targetLocales],
+      locales: [...targetLocales],
       fallbackChains: { ...settings.fallbackChains },
       sourceLocalePriority: [],
       llmCandidates: project.llmCandidates ?? {},
@@ -590,13 +580,13 @@ function App() {
 
   async function exportResourcePack() {
     if (rows.length === 0) {
-      setStatus({ tone: "warn", text: settings.targetLocales.length === 0 ? "Add a target locale before exporting." : "Load mod jars before exporting." });
+      setStatus({ tone: "warn", text: "Load mod jars before exporting." });
       return;
     }
     await runBusy("Resource pack zip exported.", async () => {
-      const blob = await createResourcePackZip(rows, settings.targetLocales, {
+      const blob = await createResourcePackZip(rows, targetLocales, {
         packFormat: settings.packFormat,
-        description: `${settings.description}\nLocales: ${settings.targetLocales.join(", ")}`,
+        description: `${settings.description}\nLocales: ${targetLocales.join(", ")}`,
         sourcePacks,
         sourcePackMode: settings.sourcePackMode,
         skipSources: settings.exportSkipSources,
@@ -607,12 +597,12 @@ function App() {
 
   async function exportPatchedJars() {
     if (modFiles.length === 0 || rows.length === 0) {
-      setStatus({ tone: "warn", text: settings.targetLocales.length === 0 ? "Add a target locale before exporting patched jars." : "Load mod jars before exporting patched jars." });
+      setStatus({ tone: "warn", text: "Load mod jars before exporting patched jars." });
       return;
     }
     let summary = "";
     await runBusy("Patched jar export created.", async () => {
-      const result = await createPatchedJarDownload(modFiles, rows, settings.targetLocales, {
+      const result = await createPatchedJarDownload(modFiles, rows, targetLocales, {
         skipSources: settings.exportSkipSources,
       });
       if (result.jars.length === 0) {
@@ -764,7 +754,7 @@ function App() {
       return;
     }
     setReferenceLocale(normalizedLocale);
-    if (settings.targetLocales.includes(normalizedLocale)) {
+    if (targetLocales.includes(normalizedLocale)) {
       setReferenceFallbackLocale(normalizedLocale);
     }
   }
@@ -852,6 +842,7 @@ function App() {
             modCount={modScan.fingerprints.length}
             sourceCount={sourcePacks.length}
             settings={settings}
+            targetLocales={targetLocales}
             setSettings={setSettings}
             activeLocale={activeLocale}
             setActiveLocale={setActiveLocale}

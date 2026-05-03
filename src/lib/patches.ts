@@ -1,8 +1,9 @@
 import { convertChineseLocale } from "./convert";
 import { makeEntryId } from "./entryId";
 import { sha256Text } from "./hash";
-import { isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./locales";
+import { DEFAULT_TARGET_LOCALE, effectiveTargetLocales, isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./locales";
 import { normalizeGlossaryOverrides } from "./glossary";
+import { compareNamespaceNames, VANILLA_NAMESPACE, VANILLA_TRANSLATIONS } from "./vanilla";
 import type {
   CandidateValue,
   CatalogRow,
@@ -24,7 +25,7 @@ import type {
 import { DEFAULT_CHINESE_LOCALE_FALLBACKS, DEFAULT_CONVERT_SOURCE_SETTINGS } from "./types";
 
 type LocaleCandidate = CandidateValue & { locale: LocaleCode };
-const DEFAULT_FALLBACK_LOCALE = "en_us";
+const DEFAULT_FALLBACK_LOCALE = DEFAULT_TARGET_LOCALE;
 
 export function createEmptyProjectPatch(): LangpackProjectPatch {
   return {
@@ -85,13 +86,10 @@ export function buildCatalog(
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
   locales: readonly LocaleCode[] = project.locales ?? [],
 ): CatalogRow[] {
-  const targetLocales = uniqueLocaleCodes(locales);
-  if (targetLocales.length === 0) {
-    return [];
-  }
+  const targetLocales = effectiveTargetLocales(locales);
 
   const rows: CatalogRow[] = [];
-  const namespaces = Object.keys(modTranslations).sort();
+  const namespaces = collectCatalogNamespaces(modTranslations);
 
   for (const namespace of namespaces) {
     const keys = collectNamespaceKeys(modTranslations, sourcePacks, namespace);
@@ -208,6 +206,11 @@ export function resolveBaseValue(
     return { source: "jar", value: jarLocaleValue, locale: targetLocale, sourceLabel: "Mod jar locale" };
   }
 
+  const vanillaLocaleValue = vanillaValue(namespace, targetLocale, key);
+  if (vanillaLocaleValue !== undefined) {
+    return { source: "vanilla", value: vanillaLocaleValue, locale: targetLocale, sourceLabel: "Vanilla locale" };
+  }
+
   for (const fallbackLocale of fallbackCandidateLocales(targetLocale, fallbackChains)) {
     const candidate = resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, fallbackLocale, key, convertSources);
     if (candidate) {
@@ -234,7 +237,11 @@ export function resolveSourceValue(
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
 ): CandidateValue {
   const targetLocale = normalizeLocaleCode(locale);
-  for (const sourceLocale of fallbackCandidateLocales(targetLocale, fallbackChains)) {
+  const sourceLocales = fallbackCandidateLocales(targetLocale, fallbackChains);
+  if (sourceLocales.length === 0) {
+    sourceLocales.push(targetLocale);
+  }
+  for (const sourceLocale of sourceLocales) {
     const candidate = resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, sourceLocale, key, convertSources);
     if (candidate) {
       return candidate;
@@ -334,6 +341,13 @@ function resolveLocaleCandidate(
     const value = modTranslations[namespace]?.[locale]?.[key];
     if (value !== undefined) {
       return { source: "jar", value, locale, sourceLabel: `${locale} jar` };
+    }
+  }
+
+  if (convertSources.vanilla) {
+    const value = vanillaValue(namespace, locale, key);
+    if (value !== undefined) {
+      return { source: "vanilla", value, locale, sourceLabel: `${locale} vanilla` };
     }
   }
 
@@ -440,6 +454,8 @@ export function patchSourceLabel(source: SourceKind): string {
   switch (source) {
     case "resourcePack":
       return "Resource pack";
+    case "vanilla":
+      return "Vanilla";
     case "llm":
       return "LLM";
     case "manual":
@@ -471,7 +487,11 @@ function collectNamespaceKeys(
   namespace: string,
 ): string[] {
   const keys = new Set<string>();
-  for (const namespaceLocales of [modTranslations[namespace], ...sourcePacks.map((pack) => pack.translations[namespace])]) {
+  for (const namespaceLocales of [
+    modTranslations[namespace],
+    vanillaNamespaceTranslations(namespace),
+    ...sourcePacks.map((pack) => pack.translations[namespace]),
+  ]) {
     for (const localeData of Object.values(namespaceLocales ?? {})) {
       for (const key of Object.keys(localeData ?? {})) {
         keys.add(key);
@@ -501,6 +521,12 @@ function collectLocalesWithKey(
       }
     }
   }
+  const vanillaLocales = vanillaNamespaceTranslations(namespace);
+  for (const [locale, data] of Object.entries(vanillaLocales ?? {})) {
+    if (data[key] !== undefined) {
+      locales.add(locale);
+    }
+  }
   for (const id of Object.keys(project?.patches ?? {})) {
     const prefix = `${namespace}/`;
     if (!id.startsWith(prefix)) {
@@ -518,6 +544,22 @@ function collectLocalesWithKey(
     }
   }
   return [...locales];
+}
+
+function collectCatalogNamespaces(modTranslations: TranslationMap): string[] {
+  return uniqueStrings([...Object.keys(modTranslations), VANILLA_NAMESPACE]).sort(compareNamespaceNames);
+}
+
+function vanillaNamespaceTranslations(namespace: string): TranslationMap[string] | undefined {
+  return namespace === VANILLA_NAMESPACE ? VANILLA_TRANSLATIONS[VANILLA_NAMESPACE] : undefined;
+}
+
+function vanillaValue(namespace: string, locale: LocaleCode, key: string): string | undefined {
+  return vanillaNamespaceTranslations(namespace)?.[locale]?.[key];
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }
 
 function normalizeFallbackChains(raw: unknown, locales: readonly LocaleCode[], legacyFallbacks: LocaleFallbacks = {}): LocaleFallbacks {

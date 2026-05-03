@@ -2,6 +2,7 @@ import { createEmptyProjectPatch, normalizeProjectPatch, resolveLlmReferenceValu
 import type { LlmJob, LlmSettings } from "../lib/llm";
 import type { AppSettings, PersistedLlmSettings } from "../lib/deploymentConfig";
 import { uniqueLocaleCodes, isValidLocaleCode } from "../lib/locales";
+import { VANILLA_NAMESPACE, VANILLA_TRANSLATIONS } from "../lib/vanilla";
 import type {
   CandidateValue,
   CatalogRow,
@@ -23,6 +24,9 @@ export function rowId(row: CatalogRow): string {
 
 export function rowHasLocaleValue(row: CatalogRow, locale: LocaleCode, modTranslations: ModScanResult["translations"], sourcePacks: SourcePackScanResult[]): boolean {
   if (modTranslations[row.namespace]?.[locale]?.[row.key] !== undefined) {
+    return true;
+  }
+  if (row.namespace === VANILLA_NAMESPACE && VANILLA_TRANSLATIONS[VANILLA_NAMESPACE]?.[locale]?.[row.key] !== undefined) {
     return true;
   }
   return sourcePacks.some((pack) => pack.translations[row.namespace]?.[locale]?.[row.key] !== undefined);
@@ -258,6 +262,7 @@ export function buildStats(rows: CatalogRow[], locale: LocaleCode, project: Lang
       return counts;
     },
     {
+      vanilla: 0,
       jar: 0,
       resourcePack: 0,
       llm: 0,
@@ -285,6 +290,7 @@ export function countTranslationTargetsBySource(rows: CatalogRow[], locale: Loca
       return counts;
     },
     {
+      vanilla: 0,
       jar: 0,
       resourcePack: 0,
       llm: 0,

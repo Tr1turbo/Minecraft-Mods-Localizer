@@ -18,9 +18,9 @@ import { isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./local
 export const DEPLOYMENT_CONFIG_FILENAME = "app-config.json";
 export const OFFICIAL_OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 
-export const SOURCE_LABEL_ORDER: SourceKind[] = ["jar", "resourcePack", "converted", "llm", "manual", "fallback", "missing"];
-export const SOURCE_TRANSLATE_TARGET_ORDER: SourceKind[] = ["jar", "resourcePack", "converted", "llm", "manual", "fallback", "missing"];
-export const CONVERT_SOURCE_ORDER: ConvertSourceKind[] = ["manual", "llm", "resourcePack", "jar"];
+export const SOURCE_LABEL_ORDER: SourceKind[] = ["vanilla", "jar", "resourcePack", "converted", "llm", "manual", "fallback", "missing"];
+export const SOURCE_TRANSLATE_TARGET_ORDER: SourceKind[] = ["vanilla", "jar", "resourcePack", "converted", "llm", "manual", "fallback", "missing"];
+export const CONVERT_SOURCE_ORDER: ConvertSourceKind[] = ["manual", "llm", "resourcePack", "jar", "vanilla"];
 export const DEFAULT_FALLBACK_LOCALE = "en_us";
 export const LLM_REFERENCE_MODES: LlmReferenceMode[] = ["en_us", "fallback", "all"];
 
@@ -61,6 +61,7 @@ export interface DeploymentDefaults {
 type ConfigFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 const DEFAULT_SOURCE_LABELS: SourceLabelSettings = {
+  vanilla: { label: "Vanilla", background: "#f0f4dc", text: "#566422", stripe: "#9aac45" },
   jar: { label: "Jar", background: "#e6edf7", text: "#315b8c", stripe: "#6c8fba" },
   resourcePack: { label: "Resource pack", background: "#ecf7e7", text: "#436f2d", stripe: "#75a857" },
   converted: { label: "Converted", background: "#e0f4ef", text: "#1d6c5b", stripe: "#2f9a83" },
@@ -86,6 +87,7 @@ export function createDefaultAppSettings(): AppSettings {
     convertSources: { ...DEFAULT_CONVERT_SOURCE_SETTINGS },
     exportSkipSources: { ...DEFAULT_EXPORT_SKIP_SOURCES },
     translateSourceTargets: {
+      vanilla: false,
       jar: false,
       resourcePack: false,
       converted: false,

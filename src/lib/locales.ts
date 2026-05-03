@@ -1,4 +1,5 @@
 export const CHINESE_LOCALES = ["zh_cn", "zh_tw", "zh_hk"] as const;
+export const DEFAULT_TARGET_LOCALE = "en_us";
 
 export const BUNDLED_LOCALE_CODES = [
   "de_de",
@@ -20,7 +21,7 @@ export const BUNDLED_LOCALE_CODES = [
   "zh_tw",
 ] as const;
 
-export const DEFAULT_SOURCE_LOCALE_PRIORITY = ["en_us"] as const;
+export const DEFAULT_SOURCE_LOCALE_PRIORITY = [DEFAULT_TARGET_LOCALE] as const;
 
 export function normalizeLocaleCode(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -43,6 +44,11 @@ export function uniqueLocaleCodes(values: readonly unknown[]): string[] {
     output.push(locale);
   }
   return output;
+}
+
+export function effectiveTargetLocales(values: readonly unknown[]): string[] {
+  const locales = uniqueLocaleCodes(values);
+  return locales.length ? locales : [DEFAULT_TARGET_LOCALE];
 }
 
 export function isChineseLocale(locale: string): locale is (typeof CHINESE_LOCALES)[number] {

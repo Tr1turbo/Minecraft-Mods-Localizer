@@ -6,6 +6,7 @@ import { TranslationProgressPanel } from "../../components/TranslationProgressPa
 import { removeDraft, rowHasLocaleValue, rowId } from "../../app/helpers";
 import type { TableItem, TranslationProgress } from "../../app/types";
 import type { AppSettings } from "../../lib/deploymentConfig";
+import { effectiveTargetLocales } from "../../lib/locales";
 import type { CatalogRow, EntryId, LocaleCode, ModScanResult, ResolvedEntry, SourcePackScanResult } from "../../lib/types";
 import { InlineValueEditor } from "./InlineValueEditor";
 import { SourceBadge } from "../../components/SourceBadge";
@@ -55,12 +56,13 @@ export function NamespaceTable({
   llmWarnings,
   clearLlmWarnings,
 }: NamespaceTableProps) {
+  const targetLocales = effectiveTargetLocales(settings.targetLocales);
   return (
     <>
       {llmWarnings.length ? <LlmWarningsPanel warnings={llmWarnings} clearWarnings={clearLlmWarnings} /> : null}
       <div className="tableToolbar">
         <div className="localeTabs" role="tablist" aria-label="Locales">
-          {settings.targetLocales.map((locale) => (
+          {targetLocales.map((locale) => (
             <button
               type="button"
               key={locale}

@@ -2,12 +2,13 @@
 
 A local-first web app for translating Minecraft mod language files.
 
-Load mod `.jar` files and optional resource packs, choose target Minecraft locales, review the detected language keys, edit missing or incorrect translations, and export either a normal resource pack or patched copies of the loaded jars. The app runs in the browser, so selected files stay on your machine unless you explicitly use the optional LLM translation feature.
+Load mod `.jar` files and optional resource packs, choose target Minecraft locales, review the detected language keys, edit missing or incorrect translations, and export either a normal resource pack or patched copies of the loaded jars. The bundled Minecraft `minecraft/lang/` files are shown as a built-in `minecraft` namespace demo, so the app has editable rows before any mod jars are loaded. The app runs in the browser, so selected files stay on your machine unless you explicitly use the optional LLM translation feature.
 
 ## What It Does
 
 - Reads `assets/<namespace>/lang/*.json` files from Minecraft mod jars and resource packs.
-- Supports user-selected Minecraft target locales. No target locale is selected on first run.
+- Shows bundled vanilla Minecraft locale files as a read-only `minecraft` namespace source that can be overridden in exported resource packs.
+- Supports user-selected Minecraft target locales. When no target locale is selected, the editor uses `en_us`.
 - Uses configurable fallback/source locale priority; `en_us` is only a default source-priority entry, not the only possible source.
 - Applies Chinese conversion when both fallback and target locales are Chinese variants.
 - Lets you manually patch individual entries and save the work as a project patch file.
@@ -86,7 +87,7 @@ Deployment config seeds first-run defaults only. After a user changes Settings, 
 
 Each target locale fallback chain includes `en_us` by default. Chinese targets also get built-in cross-locale defaults: `zh_tw` uses `zh_hk`, `zh_cn`, `en_us`; `zh_cn` uses `zh_hk`, `zh_tw`, `en_us`; and `zh_hk` uses `zh_tw`, `zh_cn`, `en_us`. LLM source values can start from `en_us`, the configured fallback value, or all valid loaded values.
 
-`sourceLabels` can also override each source badge's `label`, `background`, `text`, and `stripe` color for `jar`, `resourcePack`, `converted`, `llm`, `manual`, `fallback`, and `missing`.
+`sourceLabels` can also override each source badge's `label`, `background`, `text`, and `stripe` color for `vanilla`, `jar`, `resourcePack`, `converted`, `llm`, `manual`, `fallback`, and `missing`.
 
 ## Test
 

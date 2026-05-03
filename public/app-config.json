@@ -12,6 +12,12 @@
     "llmReferenceMode": "en_us"
   },
   "sourceLabels": {
+    "vanilla": {
+      "label": "Vanilla",
+      "background": "#f0f4dc",
+      "text": "#566422",
+      "stripe": "#9aac45"
+    },
     "jar": {
       "label": "Jar",
       "background": "#e6edf7",

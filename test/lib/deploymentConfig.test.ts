@@ -68,6 +68,9 @@ describe("deployment config", () => {
       text: "#315b8c",
       stripe: "#6c8fba",
     });
+    expect(normalized.sourceLabels.vanilla).toMatchObject({
+      label: "Vanilla",
+    });
   });
 
   it("uses default Chinese fallback chains when app config omits them", () => {
@@ -135,6 +138,7 @@ describe("deployment config", () => {
       text: defaults.sourceLabels.jar.text,
       stripe: "#abc",
     });
+    expect(normalized.sourceLabels.vanilla).toMatchObject(defaults.sourceLabels.vanilla);
     expect((normalized.sourceLabels as Record<string, unknown>).unknown).toBeUndefined();
   });
 

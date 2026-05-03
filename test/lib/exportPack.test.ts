@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { createResourcePackZip } from "../../src/lib/exportPack";
+import { DEFAULT_EXPORT_SKIP_SOURCES } from "../../src/lib/types";
 import type { CatalogRow, LocaleCode, SourceKind } from "../../src/lib/types";
 
 describe("resource pack export", () => {
@@ -23,6 +24,32 @@ describe("resource pack export", () => {
 
     expect(zhTw).toEqual({
       "manual.key": "手動",
+    });
+  });
+
+  it("skips untouched vanilla entries by default", async () => {
+    const blob = await createResourcePackZip(
+      [rowForLocale("minecraft", "block.minecraft.oak_slab", "Oak Slab", "vanilla", "en_us")],
+      ["en_us"],
+      { skipSources: DEFAULT_EXPORT_SKIP_SOURCES },
+    );
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+
+    expect(zip.file("assets/minecraft/lang/en_us.json")).toBeNull();
+    expect(zip.file("pack.mcmeta")).toBeTruthy();
+  });
+
+  it("exports manual minecraft edits to the minecraft namespace lang file", async () => {
+    const blob = await createResourcePackZip(
+      [rowForLocale("minecraft", "block.minecraft.oak_slab", "Custom Oak Slab", "manual", "en_us")],
+      ["en_us"],
+      { skipSources: DEFAULT_EXPORT_SKIP_SOURCES },
+    );
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const enUs = JSON.parse((await zip.file("assets/minecraft/lang/en_us.json")?.async("text")) ?? "{}");
+
+    expect(enUs).toEqual({
+      "block.minecraft.oak_slab": "Custom Oak Slab",
     });
   });
 });
@@ -53,5 +80,18 @@ function entry(namespace: string, locale: LocaleCode, key: string, value: string
     hasSource: true,
     base: { source, value, sourceLabel: "test" },
     final: { source, value, sourceLabel: "test" },
+  };
+}
+
+function rowForLocale(namespace: string, key: string, value: string, source: SourceKind, locale: LocaleCode): CatalogRow {
+  return {
+    namespace,
+    key,
+    sourceLocale: "en_us",
+    sourceValue: key,
+    hasSource: true,
+    entries: {
+      [locale]: entry(namespace, locale, key, value, source),
+    },
   };
 }

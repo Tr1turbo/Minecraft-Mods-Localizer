@@ -15,6 +15,7 @@ export function ProjectPage({
   modCount,
   sourceCount,
   settings,
+  targetLocales,
   setSettings,
   activeLocale,
   setActiveLocale,
@@ -36,6 +37,7 @@ export function ProjectPage({
   modCount: number;
   sourceCount: number;
   settings: AppSettings;
+  targetLocales: readonly LocaleCode[];
   setSettings: Dispatch<SetStateAction<AppSettings>>;
   activeLocale: LocaleCode;
   setActiveLocale: Dispatch<SetStateAction<LocaleCode>>;
@@ -125,8 +127,7 @@ export function ProjectPage({
         </div>
         <div className="projectActionPanel">
           <div className="localeTabs" role="tablist" aria-label="Project action locale">
-            {settings.targetLocales.length === 0 ? <span className="targetHint">Add a target locale in Settings.</span> : null}
-            {settings.targetLocales.map((locale) => (
+            {targetLocales.map((locale) => (
               <button
                 type="button"
                 key={locale}

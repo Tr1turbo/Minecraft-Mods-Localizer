@@ -276,7 +276,7 @@ export function SettingsPage({
         </div>
         <LocaleOrderList
           locales={settings.targetLocales}
-          emptyText="No target locales"
+          emptyText="Using en_us"
           moveLocale={moveTargetLocale}
           removeLocale={removeTargetLocale}
         />
@@ -341,7 +341,7 @@ export function SettingsPage({
         <div className="panelHeader">
           <h2>Locale fallback</h2>
         </div>
-        {settings.targetLocales.length === 0 ? <div className="emptyState">No target locales</div> : null}
+        {settings.targetLocales.length === 0 ? <div className="emptyState">Using en_us</div> : null}
         {settings.targetLocales.map((locale) => (
           <FallbackChainEditor
             key={locale}
@@ -438,7 +438,7 @@ export function SettingsPage({
             ))}
           </div>
           <div className="targetHint">
-            Checked sources are omitted from resource pack zip and patched jar exports. Jar and Fallback are skipped by default.
+            Checked sources are omitted from resource pack zip and patched jar exports. Vanilla, Jar, and Fallback are skipped by default.
           </div>
         </div>
       </section>

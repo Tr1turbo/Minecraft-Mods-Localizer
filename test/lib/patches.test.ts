@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { makeEntryId } from "../../src/lib/entryId";
 import { createResourcePackZip } from "../../src/lib/exportPack";
 import {
+  buildCatalog,
   createEmptyProjectPatch,
   createPatchValue,
   normalizeProjectPatch,
@@ -71,6 +72,59 @@ describe("patch resolution", () => {
     });
   });
 
+  it("builds bundled minecraft rows as vanilla with implicit en_us target", () => {
+    const rows = buildCatalog({ create: { en_us: { "block.create.shaft": "Shaft" } } }, [], createEmptyProjectPatch());
+    const oakSlab = rows.find((row) => row.namespace === "minecraft" && row.key === "block.minecraft.oak_slab");
+
+    expect(rows[0].namespace).toBe("minecraft");
+    expect(oakSlab).toBeTruthy();
+    expect(oakSlab?.sourceLocale).toBe("en_us");
+    expect(oakSlab?.sourceValue).toBe("Oak Slab");
+    expect(oakSlab?.entries.en_us).toMatchObject({
+      locale: "en_us",
+      hasSource: true,
+      base: {
+        source: "vanilla",
+        value: "Oak Slab",
+        sourceLabel: "Vanilla locale",
+      },
+      final: {
+        source: "vanilla",
+        value: "Oak Slab",
+      },
+    });
+  });
+
+  it("lets resource packs and loaded jars override bundled vanilla minecraft values", () => {
+    const minecraftMods: TranslationMap = {
+      minecraft: {
+        en_us: {
+          "block.minecraft.oak_slab": "Jar Oak Slab",
+        },
+      },
+    };
+    const pack = sourcePack("minecraft-overrides.zip", {
+      minecraft: {
+        en_us: {
+          "block.minecraft.oak_slab": "Pack Oak Slab",
+        },
+      },
+    });
+
+    expect(resolveBaseValue(minecraftMods, [pack], "minecraft", "en_us", "block.minecraft.oak_slab")).toMatchObject({
+      source: "resourcePack",
+      value: "Pack Oak Slab",
+    });
+    expect(resolveBaseValue(minecraftMods, [], "minecraft", "en_us", "block.minecraft.oak_slab")).toMatchObject({
+      source: "jar",
+      value: "Jar Oak Slab",
+    });
+    expect(resolveBaseValue({}, [], "minecraft", "en_us", "block.minecraft.oak_slab")).toMatchObject({
+      source: "vanilla",
+      value: "Oak Slab",
+    });
+  });
+
   it("auto-converts from the first translated locale in the fallback chain", () => {
     const customFallbacks = {
       zh_cn: ["zh_tw", "zh_hk", "en_us"],
@@ -100,8 +154,8 @@ describe("patch resolution", () => {
       zh_tw: ["en_us"],
       zh_hk: ["zh_tw", "en_us"],
     };
-    const onlyLlm = { manual: false, llm: true, resourcePack: false, jar: false };
-    const jarOnly = { manual: false, llm: false, resourcePack: false, jar: true };
+    const onlyLlm = { manual: false, llm: true, resourcePack: false, jar: false, vanilla: false };
+    const jarOnly = { manual: false, llm: false, resourcePack: false, jar: true, vanilla: false };
 
     expect(resolveBaseValue(mods, [], "create", "zh_cn", "block.create.cog", fallbackChain, [], project, onlyLlm)).toMatchObject({
       source: "converted",
@@ -129,8 +183,8 @@ describe("patch resolution", () => {
       zh_tw: ["en_us"],
       zh_hk: ["zh_tw", "en_us"],
     };
-    const onlyManual = { manual: true, llm: false, resourcePack: false, jar: false };
-    const jarOnly = { manual: false, llm: false, resourcePack: false, jar: true };
+    const onlyManual = { manual: true, llm: false, resourcePack: false, jar: false, vanilla: false };
+    const jarOnly = { manual: false, llm: false, resourcePack: false, jar: true, vanilla: false };
 
     expect(resolveBaseValue(mods, [], "create", "zh_cn", "block.create.cog", fallbackChain, [], project, onlyManual)).toMatchObject({
       source: "converted",

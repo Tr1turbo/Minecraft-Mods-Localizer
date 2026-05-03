@@ -10,8 +10,8 @@ export const DEFAULT_CHINESE_LOCALE_FALLBACKS: Record<ChineseLocale, string[]> =
   zh_hk: ["zh_tw", "zh_cn", "en_us"],
 };
 
-export type SourceKind = "jar" | "resourcePack" | "llm" | "manual" | "converted" | "fallback" | "missing";
-export type ConvertSourceKind = "manual" | "llm" | "resourcePack" | "jar";
+export type SourceKind = "vanilla" | "jar" | "resourcePack" | "llm" | "manual" | "converted" | "fallback" | "missing";
+export type ConvertSourceKind = "manual" | "llm" | "resourcePack" | "jar" | "vanilla";
 export type ConvertSourceSettings = Record<ConvertSourceKind, boolean>;
 export type ExportSkipSourceSettings = Record<SourceKind, boolean>;
 export type LlmReferenceMode = "en_us" | "fallback" | "all";
@@ -21,9 +21,11 @@ export const DEFAULT_CONVERT_SOURCE_SETTINGS: ConvertSourceSettings = {
   llm: true,
   resourcePack: true,
   jar: true,
+  vanilla: true,
 };
 
 export const DEFAULT_EXPORT_SKIP_SOURCES: ExportSkipSourceSettings = {
+  vanilla: true,
   jar: true,
   resourcePack: false,
   converted: false,
