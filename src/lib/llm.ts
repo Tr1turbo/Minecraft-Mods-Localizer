@@ -1,6 +1,6 @@
 import { protectedTokensMatch } from "./placeholders";
 import { createPatchValue, resolveBaseValue } from "./patches";
-import { DEFAULT_RUNTIME_GLOSSARY, selectGlossaryEntries } from "./glossary";
+import { DEFAULT_RUNTIME_GLOSSARY, compactVanillaGlossaryEntriesForPrompt, selectGlossaryEntries } from "./glossary";
 import { uniqueLocaleCodes } from "./locales";
 import type {
   ConvertSourceSettings,
@@ -308,7 +308,8 @@ function compactGlossary(
   sourceLocales: readonly LocaleCode[],
   targetLocale: LocaleCode,
 ): Array<Record<string, string[] | string>> {
-  return glossary.flatMap((entry) => {
+  const locales = uniqueLocaleCodes([...sourceLocales, targetLocale]);
+  const entries = glossary.flatMap((entry) => {
     const sourceTerms = sourceLocales
       .filter((locale) => locale !== targetLocale)
       .map((locale) => [locale, entry.terms[locale] ?? []] as const)
@@ -319,11 +320,19 @@ function compactGlossary(
     }
     return [{
       id: entry.id,
-      ...Object.fromEntries(sourceTerms),
-      [targetLocale]: targetTerms,
+      source: entry.source,
+      terms: {
+        ...Object.fromEntries(sourceTerms),
+        [targetLocale]: targetTerms,
+      },
       ...(entry.note ? { note: entry.note } : {}),
     }];
   });
+  return compactVanillaGlossaryEntriesForPrompt(entries, locales).map((entry) => ({
+    id: entry.id,
+    ...entry.terms,
+    ...(entry.note ? { note: entry.note } : {}),
+  }));
 }
 
 function createPromptJobs(jobs: LlmJob[]): PromptJob[] {

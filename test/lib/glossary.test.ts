@@ -4,6 +4,7 @@ import curatedGlossary from "../../data/curatedGlossary.json";
 import {
   BUILTIN_GLOSSARY,
   INTERNAL_VANILLA_GLOSSARY,
+  compactVanillaGlossaryEntriesForDisplay,
   effectiveGlossaryEntries,
   glossaryDictionaryForConversion,
   normalizeGlossaryOverrides,
@@ -124,5 +125,110 @@ describe("glossary", () => {
 
     expect(glossaryDictionaryForConversion(runtimeGlossary, "zh_cn", "zh_tw")).toBe(first);
     expect(glossaryDictionaryForConversion(runtimeGlossary, "zh_tw", "zh_cn")).not.toBe(first);
+  });
+
+  it("matches longer vanilla phrases first while keeping curated and custom word matches", () => {
+    const runtimeGlossary = glossaryWithInternalVanilla(
+      effectiveGlossaryEntries({
+        "custom.lantern": {
+          enabled: true,
+          source: "custom",
+          en_us: ["lantern"],
+          zh_tw: ["燈籠"],
+        },
+      }),
+    );
+    const matches = selectGlossaryEntriesForReference(
+      { key: "block.test.waxed_exposed_copper_lantern", locale: "en_us", value: "Waxed Exposed Copper Lantern" },
+      runtimeGlossary,
+      80,
+    );
+    const ids = matches.map((entry) => entry.id);
+
+    expect(ids).toContain("block.minecraft.waxed_exposed_copper_lantern");
+    expect(ids).toContain("custom.lantern");
+    expect(ids).toContain("curated.item.copper");
+    expect(ids).not.toContain("block.minecraft.exposed_copper_lantern");
+    expect(ids).not.toContain("block.minecraft.copper_lantern");
+    expect(ids).not.toContain("block.minecraft.lantern");
+  });
+
+  it("compacts same-object vanilla Glossary hints across tags", () => {
+    const runtimeGlossary = glossaryWithInternalVanilla(effectiveGlossaryEntries());
+    const matches = selectGlossaryEntriesForReference(
+      { key: "test.lingering_potion", locale: "en_us", value: "Lingering Potion" },
+      runtimeGlossary,
+      40,
+    );
+
+    const compact = compactVanillaGlossaryEntriesForDisplay(matches, ["en_us", "zh_tw"]);
+    const potion = compact.find((entry) => entry.displayId === "minecraft.lingering_potion");
+
+    expect(potion).toMatchObject({
+      source: "vanilla",
+      tags: ["entity", "item"],
+      hiddenIds: [],
+      allIds: ["entity.minecraft.lingering_potion", "item.minecraft.lingering_potion"],
+    });
+  });
+
+  it("compacts same-value vanilla Glossary hints with a hidden id count", () => {
+    const runtimeGlossary = glossaryWithInternalVanilla(effectiveGlossaryEntries());
+    const matches = selectGlossaryEntriesForReference(
+      { key: "test.music_disc", locale: "en_us", value: "Music Disc" },
+      runtimeGlossary,
+      80,
+    );
+
+    const compact = compactVanillaGlossaryEntriesForDisplay(matches, ["en_us", "zh_tw"]);
+    const musicDisc = compact.find((entry) => entry.displayId === "minecraft.music_disc_5");
+
+    expect(musicDisc).toMatchObject({
+      source: "vanilla",
+      tags: ["item"],
+    });
+    expect(musicDisc?.hiddenIds).toHaveLength(20);
+    expect(musicDisc?.allIds).toContain("item.minecraft.music_disc_11");
+    expect(compact.filter((entry) => entry.terms.en_us?.[0] === "Music Disc")).toHaveLength(1);
+  });
+
+  it("does not compact curated entries or vanilla entries with different displayed terms", () => {
+    const compactCurated = compactVanillaGlossaryEntriesForDisplay(
+      [
+        {
+          id: "curated.first",
+          enabled: true,
+          source: "curated",
+          terms: { en_us: ["Music Disc"], zh_tw: ["唱片"] },
+        },
+        {
+          id: "curated.second",
+          enabled: true,
+          source: "curated",
+          terms: { en_us: ["Music Disc"], zh_tw: ["唱片"] },
+        },
+      ],
+      ["en_us", "zh_tw"],
+    );
+    const compactDifferentTerms = compactVanillaGlossaryEntriesForDisplay(
+      [
+        {
+          id: "entity.minecraft.test_object",
+          enabled: true,
+          source: "vanilla",
+          terms: { en_us: ["Test Object"], zh_tw: ["測試實體"] },
+        },
+        {
+          id: "item.minecraft.test_object",
+          enabled: true,
+          source: "vanilla",
+          terms: { en_us: ["Test Object"], zh_tw: ["測試物品"] },
+        },
+      ],
+      ["en_us", "zh_tw"],
+    );
+
+    expect(compactCurated.map((entry) => entry.id)).toEqual(["curated.first", "curated.second"]);
+    expect(compactDifferentTerms.map((entry) => entry.id)).toEqual(["entity.minecraft.test_object", "item.minecraft.test_object"]);
   });
 });

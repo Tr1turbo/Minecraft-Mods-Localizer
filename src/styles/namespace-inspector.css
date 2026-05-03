@@ -33,14 +33,16 @@
 
 .glossaryMatchMeta {
   align-items: center;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 7px;
-  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .glossaryMatchMeta strong {
   color: #263649;
+  flex: 1 1 auto;
   font-size: 12px;
+  min-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -69,6 +71,60 @@
 .glossarySource.vanilla {
   background: #e6edf7;
   color: #315b8c;
+}
+
+.glossaryIdChip {
+  background: #eef3f7;
+  border: 1px solid #d7e0e8;
+  border-radius: 999px;
+  color: #536171;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
+.glossaryIdChip.hasTooltip {
+  cursor: help;
+  outline-offset: 2px;
+  position: relative;
+}
+
+.glossaryIdChip.hasTooltip::after {
+  background: #17202a;
+  border: 1px solid #2d3a47;
+  border-radius: 6px;
+  box-shadow: 0 8px 22px rgb(23 32 42 / 0.22);
+  color: #ffffff;
+  content: attr(data-full-ids);
+  font-size: 12px;
+  font-weight: 600;
+  left: 50%;
+  line-height: 1.35;
+  max-height: 280px;
+  max-width: min(520px, 70vw);
+  opacity: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  transform: translate(-50%, -2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  white-space: pre-line;
+  width: max-content;
+  z-index: 40;
+}
+
+.glossaryIdChip.hasTooltip:hover::after,
+.glossaryIdChip.hasTooltip:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .glossaryMatchTerms {

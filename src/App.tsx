@@ -215,7 +215,7 @@ function App() {
   const selectedGlossaryMatches = useMemo(
     () =>
       selectedRow && activeLocale && selectedReference
-        ? selectGlossaryEntriesForReference({ key: selectedRow.key, locale: selectedReference.locale, value: selectedReference.value }, runtimeGlossary)
+        ? selectGlossaryEntriesForReference({ key: selectedRow.key, locale: selectedReference.locale, value: selectedReference.value }, runtimeGlossary, 80)
         : [],
     [activeLocale, runtimeGlossary, selectedReference, selectedRow],
   );

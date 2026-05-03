@@ -1,4 +1,4 @@
-import { joinGlossaryTerms } from "../../lib/glossary";
+import { compactVanillaGlossaryEntriesForDisplay, joinGlossaryTerms } from "../../lib/glossary";
 import type { LocaleCode, GlossaryEntry } from "../../lib/types";
 
 export function GlossaryMatchesPanel({
@@ -10,6 +10,8 @@ export function GlossaryMatchesPanel({
   activeLocale: LocaleCode;
   referenceLocale: LocaleCode;
 }) {
+  const compactMatches = compactVanillaGlossaryEntriesForDisplay(matches, [referenceLocale, activeLocale]);
+
   return (
     <section className="glossaryMatchesPanel">
       <div className="panelHeader">
@@ -17,11 +19,19 @@ export function GlossaryMatchesPanel({
         <span className="panelNote">{referenceLocale}</span>
       </div>
       <div className="glossaryMatchList">
-        {matches.map((entry) => (
+        {compactMatches.map((entry) => (
           <article className="glossaryMatchRow" key={entry.id}>
             <div className="glossaryMatchMeta">
               <span className={`glossarySource ${entry.source}`}>{entry.source}</span>
-              <strong>{entry.id}</strong>
+              <strong>{entry.displayId}</strong>
+              {entry.hiddenIds.length ? (
+                <span className="glossaryIdChip hasTooltip" data-full-ids={entry.allIds.join("\n")} tabIndex={0}>
+                  {`+${entry.hiddenIds.length}`}
+                </span>
+              ) : null}
+              {entry.tags.map((tag) => (
+                <span className="glossaryIdChip" key={tag}>{tag}</span>
+              ))}
             </div>
             <div className="glossaryMatchTerms">
               <span>

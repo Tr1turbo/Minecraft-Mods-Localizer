@@ -767,6 +767,36 @@ describe("llm", () => {
     expect(payload.glossary.map((entry: { id: string }) => entry.id)).not.toContain("curated.block.slab");
   });
 
+  it("compacts duplicate vanilla Glossary entries in the LLM payload only", async () => {
+    const id = makeEntryId("create", "zh_tw", "item.test.music_disc");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ "item.test.music_disc": "唱片" }));
+
+    const result = await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
+      [job({ targetLocale: "zh_tw", key: "item.test.music_disc", sourceText: "Music Disc" })],
+      { create: { en_us: { "item.test.music_disc": "Music Disc" } } },
+      [],
+      glossaryWithInternalVanilla(effectiveGlossaryEntries()),
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const payload = JSON.parse(request.messages[1].content);
+    const musicDiscEntries = payload.glossary.filter((entry: { id: string; en_us?: string[] }) => entry.en_us?.[0] === "Music Disc");
+    expect(payload.items).toEqual([
+      {
+        id: "item.test.music_disc",
+        refs: [{ locale: "en_us", text: "Music Disc" }],
+      },
+    ]);
+    expect(musicDiscEntries).toHaveLength(1);
+    expect(musicDiscEntries[0]).toMatchObject({
+      id: expect.stringContaining("item.minecraft.music_disc_5, music_disc_11, music_disc_13"),
+      en_us: ["Music Disc"],
+      zh_tw: ["唱片"],
+    });
+    expect(result.patches[id].value).toBe("唱片");
+  });
+
   it("simulates translations in debug mode without calling an endpoint", async () => {
     const id = makeEntryId("create", "zh_tw", "screen.create.count");
     const fetchSpy = vi.spyOn(globalThis, "fetch");
