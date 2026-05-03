@@ -1,7 +1,7 @@
 import { protectedTokensMatch } from "./placeholders";
 import { createPatchValue, resolveBaseValue } from "./patches";
-import { DEFAULT_RUNTIME_PHRASE_MAPPINGS, selectPhraseGlossary } from "./phraseMappings";
-import { isChineseLocale } from "./locales";
+import { DEFAULT_RUNTIME_GLOSSARY, selectGlossaryEntries } from "./glossary";
+import { uniqueLocaleCodes } from "./locales";
 import type {
   ConvertSourceSettings,
   EntryId,
@@ -11,7 +11,7 @@ import type {
   LlmReferenceMode,
   LlmReferenceValue,
   PatchValue,
-  PhraseMapping,
+  GlossaryEntry,
   SourcePackScanResult,
   TranslationMap,
 } from "./types";
@@ -78,7 +78,7 @@ interface LlmTranslationState {
   settings: LlmSettings;
   modTranslations: TranslationMap;
   sourcePacks: SourcePackScanResult[];
-  phraseMappings: readonly PhraseMapping[];
+  glossary: readonly GlossaryEntry[];
   options: LlmRequestOptions;
 }
 
@@ -128,20 +128,20 @@ export async function translateJobsWithLlm(
   jobs: LlmJob[],
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
-  phraseMappingsOrOptions: readonly PhraseMapping[] | LlmRequestOptions = DEFAULT_RUNTIME_PHRASE_MAPPINGS,
+  glossaryOrOptions: readonly GlossaryEntry[] | LlmRequestOptions = DEFAULT_RUNTIME_GLOSSARY,
   maybeOptions: LlmRequestOptions = {},
 ): Promise<LlmPatchResult> {
-  const phraseMappings: readonly PhraseMapping[] = isPhraseMappingArray(phraseMappingsOrOptions)
-    ? phraseMappingsOrOptions
-    : DEFAULT_RUNTIME_PHRASE_MAPPINGS;
-  const options: LlmRequestOptions = isPhraseMappingArray(phraseMappingsOrOptions) ? maybeOptions : phraseMappingsOrOptions;
+  const glossary: readonly GlossaryEntry[] = isGlossaryEntryArray(glossaryOrOptions)
+    ? glossaryOrOptions
+    : DEFAULT_RUNTIME_GLOSSARY;
+  const options: LlmRequestOptions = isGlossaryEntryArray(glossaryOrOptions) ? maybeOptions : glossaryOrOptions;
   const translatableJobs = jobs.filter(hasLlmSourceText);
   throwIfAborted(options.signal);
   if (translatableJobs.length === 0) {
     return { patches: {}, warnings: [] };
   }
   if (settings.debugMode) {
-    return translateJobsWithDebugLlm(settings, translatableJobs, modTranslations, sourcePacks, phraseMappings, options);
+    return translateJobsWithDebugLlm(settings, translatableJobs, modTranslations, sourcePacks, glossary, options);
   }
   if (!settings.baseUrl.trim()) {
     throw new Error("LLM base URL is required.");
@@ -155,7 +155,7 @@ export async function translateJobsWithLlm(
   const warnings: string[] = [];
 
   for (const group of groups) {
-    const result = await translateLocaleJobsWithLlm(settings, group, modTranslations, sourcePacks, phraseMappings, options);
+    const result = await translateLocaleJobsWithLlm(settings, group, modTranslations, sourcePacks, glossary, options);
     Object.assign(patches, result.patches);
     warnings.push(...result.warnings);
   }
@@ -168,13 +168,13 @@ async function translateLocaleJobsWithLlm(
   jobs: LlmJob[],
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
-  phraseMappings: readonly PhraseMapping[],
+  glossary: readonly GlossaryEntry[],
   options: LlmRequestOptions,
 ): Promise<LlmPatchResult> {
   const promptVersion = promptVersionForSettings(settings);
   const promptJobs = createPromptJobs(jobs);
-  const payload = createPromptPayload(settings, promptJobs, phraseMappings);
-  const state = createTranslationState(settings, promptJobs, modTranslations, sourcePacks, phraseMappings, options, promptVersion);
+  const payload = createPromptPayload(settings, promptJobs, glossary);
+  const state = createTranslationState(settings, promptJobs, modTranslations, sourcePacks, glossary, options, promptVersion);
 
   const streamResponse = await fetchChatCompletion(settings, payload, options, true);
   if (!streamResponse.ok) {
@@ -268,17 +268,21 @@ async function processChatCompletionResponse(response: Response, state: LlmTrans
   }
 }
 
-function createPromptPayload(settings: LlmSettings, promptJobs: PromptJob[], phraseMappings: readonly PhraseMapping[]): PromptPayload {
+function createPromptPayload(settings: LlmSettings, promptJobs: PromptJob[], glossaryEntries: readonly GlossaryEntry[]): PromptPayload {
   const targetLocale = promptJobs[0]?.job.targetLocale ?? "";
-  const glossary = isChineseLocale(targetLocale)
-    ? compactGlossary(
-        selectPhraseGlossary(
-          promptJobs.map((promptJob) => ({ key: promptJob.job.key, english: glossarySourceText(promptJob.job) })),
-          phraseMappings,
-        ),
-        targetLocale,
-      )
-    : [];
+  const glossaryReferences = promptJobs.flatMap((promptJob) =>
+    normalizedJobSourceValues(promptJob.job).map((sourceValue) => ({
+      key: promptJob.job.key,
+      locale: sourceValue.locale,
+      value: sourceValue.value,
+    })),
+  );
+  const glossarySourceLocales = uniqueLocaleCodes(glossaryReferences.map((reference) => reference.locale).filter(Boolean));
+  const glossary = compactGlossary(
+    selectGlossaryEntries(glossaryReferences, glossaryEntries),
+    glossarySourceLocales,
+    targetLocale,
+  );
   return {
     instructions: resolvedUserPrompt(settings),
     to: targetLocale,
@@ -299,13 +303,27 @@ function createPromptPayload(settings: LlmSettings, promptJobs: PromptJob[], phr
   };
 }
 
-function compactGlossary(glossary: ReturnType<typeof selectPhraseGlossary>, targetLocale: LocaleCode): Array<Record<string, string[] | string>> {
-  return glossary.map((mapping) => ({
-    id: mapping.id,
-    en_us: mapping.en_us,
-    [targetLocale]: mapping[targetLocale as keyof typeof mapping] as string[],
-    ...(mapping.note ? { note: mapping.note } : {}),
-  }));
+function compactGlossary(
+  glossary: ReturnType<typeof selectGlossaryEntries>,
+  sourceLocales: readonly LocaleCode[],
+  targetLocale: LocaleCode,
+): Array<Record<string, string[] | string>> {
+  return glossary.flatMap((entry) => {
+    const sourceTerms = sourceLocales
+      .filter((locale) => locale !== targetLocale)
+      .map((locale) => [locale, entry.terms[locale] ?? []] as const)
+      .filter(([, terms]) => terms.length > 0);
+    const targetTerms = entry.terms[targetLocale] ?? [];
+    if (sourceTerms.length === 0 || targetTerms.length === 0) {
+      return [];
+    }
+    return [{
+      id: entry.id,
+      ...Object.fromEntries(sourceTerms),
+      [targetLocale]: targetTerms,
+      ...(entry.note ? { note: entry.note } : {}),
+    }];
+  });
 }
 
 function createPromptJobs(jobs: LlmJob[]): PromptJob[] {
@@ -361,7 +379,7 @@ function createTranslationState(
   promptJobs: PromptJob[],
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
-  phraseMappings: readonly PhraseMapping[],
+  glossary: readonly GlossaryEntry[],
   options: LlmRequestOptions,
   promptVersion: string,
 ): LlmTranslationState {
@@ -377,7 +395,7 @@ function createTranslationState(
     settings,
     modTranslations,
     sourcePacks,
-    phraseMappings,
+    glossary,
     options,
   };
 }
@@ -436,7 +454,7 @@ async function processPromptTranslation(state: LlmTranslationState, promptJob: P
     job.targetLocale,
     job.key,
     state.options.fallbackChains,
-    state.phraseMappings,
+    state.glossary,
     undefined,
     state.options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
   );
@@ -669,16 +687,12 @@ function normalizedJobSourceValues(job: LlmJob): LlmReferenceValue[] {
   ];
 }
 
-function glossarySourceText(job: LlmJob): string {
-  return normalizedJobSourceValues(job).find((sourceValue) => sourceValue.locale === "en_us")?.value ?? job.sourceText;
-}
-
 async function translateJobsWithDebugLlm(
   settings: LlmSettings,
   jobs: LlmJob[],
   modTranslations: TranslationMap,
   sourcePacks: SourcePackScanResult[],
-  phraseMappings: readonly PhraseMapping[],
+  glossary: readonly GlossaryEntry[],
   options: LlmRequestOptions = {},
 ): Promise<LlmPatchResult> {
   const patches: Record<EntryId, PatchValue> = {};
@@ -698,7 +712,7 @@ async function translateJobsWithDebugLlm(
       job.targetLocale,
       job.key,
       options.fallbackChains,
-      phraseMappings,
+      glossary,
       undefined,
       options.convertSources ?? DEFAULT_CONVERT_SOURCE_SETTINGS,
     );
@@ -781,7 +795,7 @@ function promptVersionForSettings(settings: LlmSettings): string {
     : `${LLM_PROMPT_VERSION}-custom`;
 }
 
-function isPhraseMappingArray(value: readonly PhraseMapping[] | LlmRequestOptions): value is readonly PhraseMapping[] {
+function isGlossaryEntryArray(value: readonly GlossaryEntry[] | LlmRequestOptions): value is readonly GlossaryEntry[] {
   return Array.isArray(value);
 }
 

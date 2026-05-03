@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { convertChineseLocale } from "../../src/lib/convert";
-import { effectivePhraseMappings } from "../../src/lib/phraseMappings";
+import { effectiveGlossaryEntries } from "../../src/lib/glossary";
 
 describe("Chinese locale conversion", () => {
   it("converts between Simplified, Taiwan Traditional, and Hong Kong Traditional", () => {
@@ -15,7 +15,7 @@ describe("Chinese locale conversion", () => {
     expect(convertChineseLocale("腳踏車", "zh_tw", "zh_cn")).toBe("自行车");
   });
 
-  it("applies Phrase Mapping through OpenCC conversion", () => {
+  it("applies Glossary through OpenCC conversion", () => {
     expect(convertChineseLocale("台阶", "zh_cn", "zh_tw")).toBe("半磚");
     expect(convertChineseLocale("楼梯", "zh_cn", "zh_tw")).toBe("階梯");
     expect(convertChineseLocale("用固定式土豆加农炮击杀一只幻翼", "zh_cn", "zh_tw")).toBe(
@@ -27,17 +27,17 @@ describe("Chinese locale conversion", () => {
     expect(convertChineseLocale("末影珍珠", "zh_cn", "zh_tw")).toBe("終界珍珠");
   });
 
-  it("lets identical vanilla phrases protect longer terms from shorter mappings", () => {
+  it("lets identical vanilla phrases protect longer terms from shorter Glossary entries", () => {
     expect(convertChineseLocale("飛濺挖掘加速藥水", "zh_tw", "zh_hk", [])).toBe("飛濺挖掘加速藥水");
     expect(convertChineseLocale("飛濺挖掘加速藥水", "zh_tw", "zh_hk")).toBe("飛濺挖掘加速藥水");
     expect(convertChineseLocale("加速藥水", "zh_tw", "zh_hk")).toBe("速度藥水");
   });
 
-  it("excludes disabled mappings and lets project overrides win", () => {
-    const disabledPotato = effectivePhraseMappings({
+  it("excludes disabled Glossary entries and lets project overrides win", () => {
+    const disabledPotato = effectiveGlossaryEntries({
       "curated.item.potato": { enabled: false },
     });
-    const overriddenSlab = effectivePhraseMappings({
+    const overriddenSlab = effectiveGlossaryEntries({
       "curated.block.slab": { zh_tw: ["薄板"] },
     });
 

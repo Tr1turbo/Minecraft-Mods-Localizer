@@ -377,7 +377,7 @@ describe("patch resolution", () => {
     expect(reverted.patches[third]).toBe(patch);
   });
 
-  it("loads old project patches without Phrase Mapping overrides", () => {
+  it("loads old project patches without Glossary overrides", () => {
     const normalized = normalizeProjectPatch({
       schemaVersion: 1,
       locales: ["zh_cn", "zh_tw", "zh_hk"],
@@ -387,8 +387,8 @@ describe("patch resolution", () => {
       patches: {},
     });
 
-    expect(normalized.phraseMappings).toEqual({});
-    expect(normalized.schemaVersion).toBe(2);
+    expect(normalized.glossary).toEqual({});
+    expect(normalized.schemaVersion).toBe(3);
     expect(normalized.locales).toEqual(["zh_cn", "zh_tw", "zh_hk"]);
     expect(normalized.sourceLocalePriority).toEqual([]);
   });
@@ -406,11 +406,11 @@ describe("patch resolution", () => {
     });
   });
 
-  it("normalizes Phrase Mapping overrides in project patches", () => {
+  it("normalizes Glossary overrides in project patches", () => {
     const normalized = normalizeProjectPatch({
       schemaVersion: 1,
       locales: ["zh_cn", "zh_tw", "zh_hk"],
-      phraseMappings: {
+      glossary: {
         "curated.block.slab": {
           enabled: false,
           en_us: ["slab", "slab"],
@@ -419,10 +419,12 @@ describe("patch resolution", () => {
       },
     });
 
-    expect(normalized.phraseMappings["curated.block.slab"]).toMatchObject({
+    expect(normalized.glossary["curated.block.slab"]).toMatchObject({
       enabled: false,
-      en_us: ["slab"],
-      zh_tw: ["薄板"],
+      terms: {
+        en_us: ["slab"],
+        zh_tw: ["薄板"],
+      },
     });
   });
 

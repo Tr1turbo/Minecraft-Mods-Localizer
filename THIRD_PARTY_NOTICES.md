@@ -6,7 +6,7 @@ by the project's MIT license.
 ## Minecraft Locale Files
 
 Files under `minecraft/lang/` are Minecraft locale files used as read-only reference
-data for phrase mapping.
+data for glossary.
 
 These files are not authored by Triturbo and are not licensed under this
 project's MIT license. Minecraft and related game assets are owned by Mojang

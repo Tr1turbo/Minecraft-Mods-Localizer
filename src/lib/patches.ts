@@ -2,19 +2,19 @@ import { convertChineseLocale } from "./convert";
 import { makeEntryId } from "./entryId";
 import { sha256Text } from "./hash";
 import { isChineseLocale, normalizeLocaleCode, uniqueLocaleCodes } from "./locales";
-import { normalizePhraseMappingOverrides } from "./phraseMappings";
+import { normalizeGlossaryOverrides } from "./glossary";
 import type {
   CandidateValue,
   CatalogRow,
   ConvertSourceSettings,
   EntryId,
+  GlossaryEntry,
   LangpackProjectPatch,
   LocaleCode,
   LocaleFallbacks,
   LlmReferenceMode,
   LlmReferenceValue,
   PatchValue,
-  PhraseMapping,
   ReferenceValue,
   ResolvedEntry,
   SourceKind,
@@ -28,7 +28,7 @@ const DEFAULT_FALLBACK_LOCALE = "en_us";
 
 export function createEmptyProjectPatch(): LangpackProjectPatch {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     locales: [],
     fallbackChains: {},
     sourceLocalePriority: [],
@@ -36,7 +36,7 @@ export function createEmptyProjectPatch(): LangpackProjectPatch {
     sourcePackOrder: [],
     llmCandidates: {},
     patches: {},
-    phraseMappings: {},
+    glossary: {},
   };
 }
 
@@ -45,10 +45,10 @@ export function normalizeProjectPatch(raw: unknown): LangpackProjectPatch {
     throw new Error("Project patch must be a JSON object.");
   }
   const input = raw as Record<string, unknown>;
-  if (input.schemaVersion === 1) {
+  if (input.schemaVersion === 1 || input.schemaVersion === 2) {
     const legacyLocales = uniqueLocaleCodes(Array.isArray(input.locales) ? input.locales : Object.keys(DEFAULT_CHINESE_LOCALE_FALLBACKS));
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       locales: legacyLocales,
       fallbackChains: normalizeFallbackChains(input.fallbackChains, legacyLocales, DEFAULT_CHINESE_LOCALE_FALLBACKS),
       sourceLocalePriority: uniqueLocaleCodes(Array.isArray(input.sourceLocalePriority) ? input.sourceLocalePriority : []),
@@ -56,15 +56,15 @@ export function normalizeProjectPatch(raw: unknown): LangpackProjectPatch {
       sourcePackOrder: Array.isArray(input.sourcePackOrder) ? input.sourcePackOrder : [],
       llmCandidates: validPatchArrayRecord(input.llmCandidates),
       patches: validPatchRecord(input.patches),
-      phraseMappings: normalizePhraseMappingOverrides(input.phraseMappings),
+      glossary: normalizeGlossaryOverrides(input.glossary ?? input.phraseMappings),
     };
   }
-  if (input.schemaVersion !== 2) {
+  if (input.schemaVersion !== 3) {
     throw new Error("Unsupported project patch schema version.");
   }
   const locales = uniqueLocaleCodes(Array.isArray(input.locales) ? input.locales : []);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     locales,
     fallbackChains: normalizeFallbackChains(input.fallbackChains, locales),
     sourceLocalePriority: uniqueLocaleCodes(Array.isArray(input.sourceLocalePriority) ? input.sourceLocalePriority : []),
@@ -72,7 +72,7 @@ export function normalizeProjectPatch(raw: unknown): LangpackProjectPatch {
     sourcePackOrder: Array.isArray(input.sourcePackOrder) ? input.sourcePackOrder : [],
     llmCandidates: validPatchArrayRecord(input.llmCandidates),
     patches: validPatchRecord(input.patches),
-    phraseMappings: normalizePhraseMappingOverrides(input.phraseMappings),
+    glossary: normalizeGlossaryOverrides(input.glossary ?? input.phraseMappings),
   };
 }
 
@@ -81,7 +81,7 @@ export function buildCatalog(
   sourcePacks: SourcePackScanResult[],
   project: LangpackProjectPatch,
   fallbackChains: LocaleFallbacks = project.fallbackChains ?? {},
-  phraseMappings: readonly PhraseMapping[] = [],
+  glossary: readonly GlossaryEntry[] = [],
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
   locales: readonly LocaleCode[] = project.locales ?? [],
 ): CatalogRow[] {
@@ -106,7 +106,7 @@ export function buildCatalog(
             locale,
             key,
             fallbackChains,
-            phraseMappings,
+            glossary,
             convertSources,
           );
           return [locale, resolved];
@@ -135,7 +135,7 @@ export function resolveEntry(
   locale: LocaleCode,
   key: string,
   fallbackChains: LocaleFallbacks = project.fallbackChains ?? {},
-  phraseMappings: readonly PhraseMapping[] = [],
+  glossary: readonly GlossaryEntry[] = [],
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
 ): ResolvedEntry {
   const targetLocale = normalizeLocaleCode(locale);
@@ -148,7 +148,7 @@ export function resolveEntry(
     targetLocale,
     key,
     fallbackChains,
-    phraseMappings,
+    glossary,
     project,
     convertSources,
   );
@@ -191,7 +191,7 @@ export function resolveBaseValue(
   locale: LocaleCode,
   key: string,
   fallbackChains: LocaleFallbacks = {},
-  phraseMappings: readonly PhraseMapping[] = [],
+  glossary: readonly GlossaryEntry[] = [],
   project: LangpackProjectPatch | undefined = undefined,
   convertSources: ConvertSourceSettings = DEFAULT_CONVERT_SOURCE_SETTINGS,
 ): CandidateValue {
@@ -211,7 +211,7 @@ export function resolveBaseValue(
   for (const fallbackLocale of fallbackCandidateLocales(targetLocale, fallbackChains)) {
     const candidate = resolveLocaleCandidate(modTranslations, sourcePacks, project, namespace, fallbackLocale, key, convertSources);
     if (candidate) {
-      return fallbackCandidateValue(candidate, targetLocale, phraseMappings);
+      return fallbackCandidateValue(candidate, targetLocale, glossary);
     }
   }
 
@@ -389,11 +389,11 @@ function referenceFromCandidate(candidate: LocaleCandidate | undefined): Referen
   };
 }
 
-function fallbackCandidateValue(candidate: LocaleCandidate, targetLocale: LocaleCode, phraseMappings: readonly PhraseMapping[]): CandidateValue {
+function fallbackCandidateValue(candidate: LocaleCandidate, targetLocale: LocaleCode, glossary: readonly GlossaryEntry[]): CandidateValue {
   if (isChineseLocale(candidate.locale) && isChineseLocale(targetLocale)) {
     return {
       source: "converted",
-      value: convertChineseLocale(candidate.value, candidate.locale, targetLocale, phraseMappings),
+      value: convertChineseLocale(candidate.value, candidate.locale, targetLocale, glossary),
       locale: candidate.locale,
       sourceLabel: `Converted from ${candidate.sourceLabel}`,
     };

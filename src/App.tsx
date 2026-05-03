@@ -43,10 +43,10 @@ import { createResourcePackZip } from "./lib/exportPack";
 import { createPatchedJarDownload } from "./lib/exportJars";
 import { protectedTokenWarnings } from "./lib/placeholders";
 import {
-  effectivePhraseMappings,
-  phraseMappingsWithInternalVanilla,
-  selectPhraseMappingsForReference,
-} from "./lib/phraseMappings";
+  effectiveGlossaryEntries,
+  glossaryWithInternalVanilla,
+  selectGlossaryEntriesForReference,
+} from "./lib/glossary";
 import {
   buildCatalog,
   createEmptyProjectPatch,
@@ -66,7 +66,7 @@ import type {
   ResolvedEntry,
   SourcePackScanResult,
 } from "./lib/types";
-import { isChineseLocale, normalizeLocaleCode } from "./lib/locales";
+import { normalizeLocaleCode } from "./lib/locales";
 import { type LlmSettings } from "./lib/llm";
 import {
   type AppSettings,
@@ -110,8 +110,8 @@ function App() {
   const [sourceLabels, setSourceLabels] = useState<SourceLabelSettings>(() => createDefaultSourceLabels());
   const [llmSettings, setLlmSettings] = useState<LlmSettings>(() => createDefaultLlmSettings());
 
-  const phraseMappings = useMemo(() => effectivePhraseMappings(project.phraseMappings), [project.phraseMappings]);
-  const runtimePhraseMappings = useMemo(() => phraseMappingsWithInternalVanilla(phraseMappings), [phraseMappings]);
+  const glossaryEntries = useMemo(() => effectiveGlossaryEntries(project.glossary), [project.glossary]);
+  const runtimeGlossary = useMemo(() => glossaryWithInternalVanilla(glossaryEntries), [glossaryEntries]);
   const {
     translating,
     translationProgress,
@@ -130,7 +130,7 @@ function App() {
     setProject,
     modScan,
     sourcePacks,
-    runtimePhraseMappings,
+    runtimeGlossary,
     settings,
     llmSettings,
     setStatus,
@@ -142,7 +142,7 @@ function App() {
         sourcePacks,
         project,
         settings.fallbackChains,
-        runtimePhraseMappings,
+        runtimeGlossary,
         settings.convertSources,
         settings.targetLocales,
       ),
@@ -151,7 +151,7 @@ function App() {
       sourcePacks,
       project,
       settings.fallbackChains,
-      runtimePhraseMappings,
+      runtimeGlossary,
       settings.convertSources,
       settings.targetLocales,
     ],
@@ -210,14 +210,12 @@ function App() {
     [modScan.translations, project, selectedRow, sourcePacks],
   );
   const selectedReference = resolveVisibleReferenceValue(selectedReferenceValues, referenceLocale, referenceFallbackLocale);
-  const selectedReferenceValue = selectedReference?.value ?? "";
-  const selectedPhraseMatches = useMemo(
+  const selectedGlossaryMatches = useMemo(
     () =>
-      selectedRow
-      && isChineseLocale(activeLocale)
-        ? selectPhraseMappingsForReference({ key: selectedRow.key, value: selectedReferenceValue }, runtimePhraseMappings)
+      selectedRow && activeLocale && selectedReference
+        ? selectGlossaryEntriesForReference({ key: selectedRow.key, locale: selectedReference.locale, value: selectedReference.value }, runtimeGlossary)
         : [],
-    [activeLocale, runtimePhraseMappings, selectedReferenceValue, selectedRow],
+    [activeLocale, runtimeGlossary, selectedReference, selectedRow],
   );
   const stats = useMemo(() => buildStats(rows, activeLocale, project), [activeLocale, project, rows]);
   const draftState = useMemo<BrowserDraftState>(
@@ -263,7 +261,7 @@ function App() {
       sourcePacks.length > 0 ||
       Object.keys(project.patches ?? {}).length > 0 ||
       Object.keys(project.llmCandidates ?? {}).length > 0 ||
-      Object.keys(project.phraseMappings ?? {}).length > 0 ||
+      Object.keys(project.glossary ?? {}).length > 0 ||
       Object.keys(inlineDrafts).length > 0 ||
       Boolean(selectedEntry && manualDraft !== (selectedEntry.patch?.value ?? selectedEntry.final.value)),
     [inlineDrafts, manualDraft, modScan.fingerprints.length, project, selectedEntry, sourcePacks.length],
@@ -577,12 +575,12 @@ function App() {
   async function exportProjectPatch() {
     const exportProject: LangpackProjectPatch = {
       ...project,
-      schemaVersion: 2,
+      schemaVersion: 3,
       locales: [...settings.targetLocales],
       fallbackChains: { ...settings.fallbackChains },
       sourceLocalePriority: [],
       llmCandidates: project.llmCandidates ?? {},
-      phraseMappings: project.phraseMappings ?? {},
+      glossary: project.glossary ?? {},
       modFingerprints: modScan.fingerprints,
       sourcePackOrder: sourcePacks.map((pack) => pack.fingerprint),
     };
@@ -886,8 +884,8 @@ function App() {
             availableModels={availableModels}
             loadingModels={loadingModels}
             refreshModels={refreshModels}
-            phraseMappings={phraseMappings}
-            projectPhraseMappings={project.phraseMappings ?? {}}
+            glossaryEntries={glossaryEntries}
+            projectGlossary={project.glossary ?? {}}
             hasRows={rows.length > 0}
             refreshConvertedValues={refreshConvertedValues}
             setProject={setProject}
@@ -939,7 +937,7 @@ function App() {
             referenceLocale={referenceLocale}
             selectedReferenceValues={selectedReferenceValues}
             updateReferenceLocale={updateReferenceLocale}
-            selectedPhraseMatches={selectedPhraseMatches}
+            selectedGlossaryMatches={selectedGlossaryMatches}
             selectedLlmCandidates={selectedLlmCandidates}
             selectedLiveLlmOutput={selectedLiveLlmOutput}
             selectedLlmDisplayDraft={selectedLlmDisplayDraft}

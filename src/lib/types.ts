@@ -34,10 +34,10 @@ export const DEFAULT_EXPORT_SKIP_SOURCES: ExportSkipSourceSettings = {
 };
 
 export type EntryId = `${string}/${string}/${string}`;
-export type PhraseMappingSource = "vanilla" | "curated" | "custom";
+export type GlossarySource = "vanilla" | "curated" | "custom";
 
 export interface LangpackProjectPatch {
-  schemaVersion: 2;
+  schemaVersion: 3;
   locales: LocaleCode[];
   fallbackChains: LocaleFallbacks;
   sourceLocalePriority: LocaleCode[];
@@ -45,7 +45,7 @@ export interface LangpackProjectPatch {
   sourcePackOrder: FileFingerprint[];
   llmCandidates: Record<EntryId, PatchValue[]>;
   patches: Record<EntryId, PatchValue>;
-  phraseMappings: Record<string, PhraseMappingOverride>;
+  glossary: Record<string, GlossaryOverride>;
 }
 
 export interface PatchValue {
@@ -68,19 +68,20 @@ export interface FileFingerprint {
   sha256: string;
 }
 
-export interface PhraseMapping {
+export interface GlossaryEntry {
   id: string;
   enabled: boolean;
-  source: PhraseMappingSource;
-  en_us: string[];
-  zh_cn: string[];
-  zh_tw: string[];
-  zh_hk: string[];
+  source: GlossarySource;
+  terms: Record<LocaleCode, string[]>;
   note?: string;
 }
 
-export type PhraseMappingOverride = Partial<Omit<PhraseMapping, "id">> & {
+export type GlossaryOverride = Partial<Omit<GlossaryEntry, "id">> & {
   id?: string;
+  en_us?: string[];
+  zh_cn?: string[];
+  zh_tw?: string[];
+  zh_hk?: string[];
 };
 
 export type TranslationMap = Record<string, Record<string, Record<string, string>>>;

@@ -1,7 +1,7 @@
 import * as OpenCC from "opencc-js";
 
-import { DEFAULT_RUNTIME_PHRASE_MAPPINGS, phraseDictionaryForConversion } from "./phraseMappings";
-import type { ChineseLocale, PhraseMapping } from "./types";
+import { DEFAULT_RUNTIME_GLOSSARY, glossaryDictionaryForConversion } from "./glossary";
+import type { ChineseLocale, GlossaryEntry } from "./types";
 
 type OpenCcLocale = "cn" | "twp" | "hk";
 
@@ -11,28 +11,28 @@ const OPENCC_LOCALES: Record<ChineseLocale, OpenCcLocale> = {
   zh_hk: "hk",
 };
 
-const converters = new WeakMap<readonly PhraseMapping[], Map<string, (input: string) => string>>();
+const converters = new WeakMap<readonly GlossaryEntry[], Map<string, (input: string) => string>>();
 
 export function convertChineseLocale(
   value: string,
   from: ChineseLocale,
   to: ChineseLocale,
-  phraseMappings: readonly PhraseMapping[] = DEFAULT_RUNTIME_PHRASE_MAPPINGS,
+  glossary: readonly GlossaryEntry[] = DEFAULT_RUNTIME_GLOSSARY,
 ): string {
   if (from === to || !value) {
     return value;
   }
-  return converterFor(from, to, phraseMappings)(value);
+  return converterFor(from, to, glossary)(value);
 }
 
-function converterFor(from: ChineseLocale, to: ChineseLocale, phraseMappings: readonly PhraseMapping[]): (input: string) => string {
+function converterFor(from: ChineseLocale, to: ChineseLocale, glossary: readonly GlossaryEntry[]): (input: string) => string {
   const key = `${from}->${to}`;
-  const cached = converters.get(phraseMappings)?.get(key);
+  const cached = converters.get(glossary)?.get(key);
   if (cached) {
     return cached;
   }
 
-  const customDictionary = phraseDictionaryForConversion(phraseMappings, from, to);
+  const customDictionary = glossaryDictionaryForConversion(glossary, from, to);
   const converter =
     customDictionary.length > 0
       ? OpenCC.ConverterFactory([customDictionary], OpenCC.Locale.from[OPENCC_LOCALES[from]], OpenCC.Locale.to[OPENCC_LOCALES[to]])
@@ -40,11 +40,11 @@ function converterFor(from: ChineseLocale, to: ChineseLocale, phraseMappings: re
           from: OPENCC_LOCALES[from],
           to: OPENCC_LOCALES[to],
         });
-  let mappingConverters = converters.get(phraseMappings);
-  if (!mappingConverters) {
-    mappingConverters = new Map<string, (input: string) => string>();
-    converters.set(phraseMappings, mappingConverters);
+  let glossaryConverters = converters.get(glossary);
+  if (!glossaryConverters) {
+    glossaryConverters = new Map<string, (input: string) => string>();
+    converters.set(glossary, glossaryConverters);
   }
-  mappingConverters.set(key, converter);
+  glossaryConverters.set(key, converter);
   return converter;
 }

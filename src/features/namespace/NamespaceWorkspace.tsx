@@ -10,7 +10,7 @@ import type {
   LocaleCode,
   ModScanResult,
   PatchValue,
-  PhraseMapping,
+  GlossaryEntry,
   ReferenceValue,
   ResolvedEntry,
   SourcePackScanResult,
@@ -55,7 +55,7 @@ interface NamespaceWorkspaceProps {
   referenceLocale: LocaleCode;
   selectedReferenceValues: readonly ReferenceValue[];
   updateReferenceLocale: (locale: LocaleCode) => void;
-  selectedPhraseMatches: PhraseMapping[];
+  selectedGlossaryMatches: GlossaryEntry[];
   selectedLlmCandidates: PatchValue[];
   selectedLiveLlmOutput: LlmLiveOutput | undefined;
   selectedLlmDisplayDraft: string | undefined;
@@ -110,7 +110,7 @@ export function NamespaceWorkspace({
   referenceLocale,
   selectedReferenceValues,
   updateReferenceLocale,
-  selectedPhraseMatches,
+  selectedGlossaryMatches,
   selectedLlmCandidates,
   selectedLiveLlmOutput,
   selectedLlmDisplayDraft,
@@ -203,7 +203,7 @@ export function NamespaceWorkspace({
           selectedReferenceLocale={selectedReferenceLocale}
           selectedReferenceValues={selectedReferenceValues}
           updateReferenceLocale={updateReferenceLocale}
-          selectedPhraseMatches={selectedPhraseMatches}
+          selectedGlossaryMatches={selectedGlossaryMatches}
           selectedLlmCandidates={selectedLlmCandidates}
           selectedLiveLlmOutput={selectedLiveLlmOutput}
           selectedLlmDisplayDraft={selectedLlmDisplayDraft}

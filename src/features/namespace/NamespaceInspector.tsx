@@ -3,9 +3,9 @@ import { RotateCcw, Save, Wand2 } from "lucide-react";
 import { SourceBadge } from "../../components/SourceBadge";
 import { LlmCandidatesPanel } from "../llm/LlmCandidatesPanel";
 import type { DiffSegment, LlmLiveOutput } from "../../app/types";
-import type { LocaleCode, PatchValue, PhraseMapping, ReferenceValue, ResolvedEntry } from "../../lib/types";
+import type { LocaleCode, PatchValue, GlossaryEntry, ReferenceValue, ResolvedEntry } from "../../lib/types";
 import { PatchTextEditor } from "./PatchTextEditor";
-import { PhraseMatchesPanel } from "./PhraseMatchesPanel";
+import { GlossaryMatchesPanel } from "./GlossaryMatchesPanel";
 import { ReferenceValueBlock } from "./ReferenceValueBlock";
 import { ValueBlock } from "./ValueBlock";
 import { MinecraftFormattedText } from "./MinecraftFormattedText";
@@ -16,7 +16,7 @@ interface NamespaceInspectorProps {
   selectedReferenceLocale: LocaleCode;
   selectedReferenceValues: readonly ReferenceValue[];
   updateReferenceLocale: (locale: LocaleCode) => void;
-  selectedPhraseMatches: PhraseMapping[];
+  selectedGlossaryMatches: GlossaryEntry[];
   selectedLlmCandidates: PatchValue[];
   selectedLiveLlmOutput: LlmLiveOutput | undefined;
   selectedLlmDisplayDraft: string | undefined;
@@ -40,7 +40,7 @@ export function NamespaceInspector({
   selectedReferenceLocale,
   selectedReferenceValues,
   updateReferenceLocale,
-  selectedPhraseMatches,
+  selectedGlossaryMatches,
   selectedLlmCandidates,
   selectedLiveLlmOutput,
   selectedLlmDisplayDraft,
@@ -74,8 +74,8 @@ export function NamespaceInspector({
         <ValueBlock title="Base value" source={selectedEntry.base.source} value={selectedEntry.base.value} label={selectedEntry.base.sourceLabel} />
       </section>
 
-      {selectedPhraseMatches.length ? (
-        <PhraseMatchesPanel matches={selectedPhraseMatches} activeLocale={selectedEntry.locale} referenceLocale={selectedReferenceLocale || referenceLocale} />
+      {selectedGlossaryMatches.length ? (
+        <GlossaryMatchesPanel matches={selectedGlossaryMatches} activeLocale={selectedEntry.locale} referenceLocale={selectedReferenceLocale || referenceLocale} />
       ) : null}
 
       {selectedLlmCandidates.length || selectedLiveLlmOutput ? (

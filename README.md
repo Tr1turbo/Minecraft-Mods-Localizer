@@ -12,7 +12,7 @@ Load mod `.jar` files and optional resource packs, choose target Minecraft local
 - Applies Chinese conversion when both fallback and target locales are Chinese variants.
 - Lets you manually patch individual entries and save the work as a project patch file.
 - Uses Minecraft locale files from `minecraft/lang/` as read-only reference data.
-- Uses curated terminology from `data/curatedPhraseMappings.json` to keep translations consistent.
+- Uses curated terminology from `data/curatedGlossary.json` to keep translations consistent.
 - Can export a resource pack zip or patched jar copies without modifying the original local jars.
 - Supports optional OpenAI-compatible LLM translation from the Settings page.
 
@@ -21,7 +21,7 @@ Load mod `.jar` files and optional resource packs, choose target Minecraft local
 ```text
 .
 ├── data/
-│   └── curatedPhraseMappings.json
+│   └── curatedGlossary.json
 ├── minecraft/
 │   └── lang/
 │       ├── en_us.json
@@ -38,7 +38,7 @@ Load mod `.jar` files and optional resource packs, choose target Minecraft local
 
 `minecraft/lang/` contains third-party Minecraft locale files used by the app at build time. These files are not covered by this project's MIT license; see `THIRD_PARTY_NOTICES.md` and `minecraft/README.md`.
 
-`data/curatedPhraseMappings.json` contains the hand-maintained terminology mappings shown in Settings. Project-specific terminology changes are stored in exported project patch files.
+`data/curatedGlossary.json` contains the hand-maintained Glossary entries shown in Settings. Project-specific terminology changes are stored in exported project patch files.
 
 `test/` contains the Vitest unit tests. Runtime app code stays under `src/`.
 

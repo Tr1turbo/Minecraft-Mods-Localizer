@@ -11,7 +11,7 @@ import {
   type LlmJob,
 } from "../../src/lib/llm";
 import { createEmptyProjectPatch, createPatchValue } from "../../src/lib/patches";
-import { effectivePhraseMappings, phraseMappingsWithInternalVanilla } from "../../src/lib/phraseMappings";
+import { effectiveGlossaryEntries, glossaryWithInternalVanilla } from "../../src/lib/glossary";
 import type { TranslationMap } from "../../src/lib/types";
 
 describe("llm", () => {
@@ -534,7 +534,7 @@ describe("llm", () => {
     expect(result.patches[zhCnId].value).toBe("橡木台阶");
   });
 
-  it("includes matching Phrase Mapping glossary entries in the request payload", async () => {
+  it("includes matching Glossary entries in the request payload", async () => {
     const id = makeEntryId("create", "zh_tw", "block.create.oak_slab");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -565,13 +565,13 @@ describe("llm", () => {
       [job({ targetLocale: "zh_tw", key: "block.create.oak_slab", sourceText: "Oak Slab" })],
       mods,
       [],
-      phraseMappingsWithInternalVanilla(effectivePhraseMappings()),
+      glossaryWithInternalVanilla(effectiveGlossaryEntries()),
     );
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
     expect(payload.glossaryInstruction).toContain("glossary");
-    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).toEqual(
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).toEqual(
       expect.arrayContaining(["curated.block.slab", "block.minecraft.oak_slab"]),
     );
     expect(payload.glossary[0]).toHaveProperty("en_us");
@@ -579,7 +579,55 @@ describe("llm", () => {
     expect(payload.glossary[0]).not.toHaveProperty("zh_cn");
   });
 
-  it("excludes unrelated Phrase Mapping entries and includes matching custom mappings", async () => {
+  it("matches Glossary entries from all LLM reference locales and sends those locales with the target", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  "block.create.oak_slab": "橡木台阶",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateJobsWithLlm(
+      { baseUrl: "https://api.openai.com/v1", apiKey: "", model: "mock-model" },
+      [
+        job({
+          targetLocale: "zh_cn",
+          key: "block.create.oak_slab",
+          sourceLocale: "en_us",
+          sourceText: "Oak Slab",
+          sourceReferenceMode: "all",
+          sourceValues: [
+            { locale: "en_us", source: "jar", sourceLabel: "en_us jar", value: "Oak Slab" },
+            { locale: "ja_jp", source: "jar", sourceLabel: "ja_jp jar", value: "オークのハーフブロック" },
+          ],
+        }),
+      ],
+      { create: { en_us: { "block.create.oak_slab": "Oak Slab" } } },
+      [],
+      glossaryWithInternalVanilla(effectiveGlossaryEntries()),
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    const payload = JSON.parse(request.messages[1].content);
+    const oakSlab = payload.glossary.find((entry: { id: string }) => entry.id === "block.minecraft.oak_slab");
+    expect(oakSlab).toMatchObject({
+      en_us: ["Oak Slab"],
+      ja_jp: ["オークのハーフブロック"],
+      zh_cn: ["橡木台阶"],
+    });
+  });
+
+  it("excludes unrelated Glossary entries and includes matching custom entries", async () => {
     const id = makeEntryId("create", "zh_cn", "block.create.engine");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -610,8 +658,8 @@ describe("llm", () => {
       [job({ targetLocale: "zh_cn", key: "block.create.engine", sourceText: "Copper Engine" })],
       mods,
       [],
-      phraseMappingsWithInternalVanilla(
-        effectivePhraseMappings({
+      glossaryWithInternalVanilla(
+        effectiveGlossaryEntries({
           "custom.engine": {
             enabled: true,
             source: "custom",
@@ -626,15 +674,15 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).toEqual(
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).toEqual(
       expect.arrayContaining(["custom.engine", "curated.item.copper"]),
     );
-    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).not.toContain("curated.item.potion");
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).not.toContain("curated.item.potion");
     expect(payload.glossary[0]).toHaveProperty("zh_cn");
     expect(payload.glossary[0]).not.toHaveProperty("zh_tw");
   });
 
-  it("does not add LLM Phrase Mapping glossary entries from key-only matches", async () => {
+  it("does not add LLM Glossary entries from key-only matches", async () => {
     const id = makeEntryId("create", "zh_cn", "block.create.engine");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -665,8 +713,8 @@ describe("llm", () => {
       [job({ targetLocale: "zh_cn", key: "block.create.engine", sourceText: "Copper Machine" })],
       mods,
       [],
-      phraseMappingsWithInternalVanilla(
-        effectivePhraseMappings({
+      glossaryWithInternalVanilla(
+        effectiveGlossaryEntries({
           "custom.engine": {
             enabled: true,
             source: "custom",
@@ -681,10 +729,10 @@ describe("llm", () => {
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.glossary.map((mapping: { id: string }) => mapping.id)).not.toContain("custom.engine");
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).not.toContain("custom.engine");
   });
 
-  it("does not send Chinese Phrase Mapping glossary entries for non-Chinese targets", async () => {
+  it("sends vanilla Glossary entries for bundled non-Chinese targets", async () => {
     const id = makeEntryId("create", "fr_fr", "block.create.oak_slab");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -708,13 +756,15 @@ describe("llm", () => {
       [job({ targetLocale: "fr_fr", key: "block.create.oak_slab", sourceText: "Oak Slab" })],
       { create: { en_us: { "block.create.oak_slab": "Oak Slab" } } },
       [],
-      phraseMappingsWithInternalVanilla(effectivePhraseMappings()),
+      glossaryWithInternalVanilla(effectiveGlossaryEntries()),
     );
 
     const request = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
     const payload = JSON.parse(request.messages[1].content);
-    expect(payload.glossary).toBeUndefined();
-    expect(payload.glossaryInstruction).toBeUndefined();
+    expect(payload.glossaryInstruction).toContain("glossary");
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).toContain("block.minecraft.oak_slab");
+    expect(payload.glossary.find((entry: { id: string }) => entry.id === "block.minecraft.oak_slab")).toHaveProperty("fr_fr");
+    expect(payload.glossary.map((entry: { id: string }) => entry.id)).not.toContain("curated.block.slab");
   });
 
   it("simulates translations in debug mode without calling an endpoint", async () => {

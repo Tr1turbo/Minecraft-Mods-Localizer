@@ -17,14 +17,14 @@ import {
 } from "../../lib/deploymentConfig";
 import { BUNDLED_LOCALE_CODES, CHINESE_LOCALES, isValidLocaleCode, normalizeLocaleCode, uniqueLocaleCodes } from "../../lib/locales";
 import {
-  isBuiltinPhraseMapping,
-  joinPhraseTerms,
-  normalizePhraseMappingOverrides,
-  phraseMappingOverrideFromMapping,
-  splitPhraseTerms,
-} from "../../lib/phraseMappings";
+  isBuiltinGlossaryEntry,
+  joinGlossaryTerms,
+  normalizeGlossaryOverrides,
+  glossaryOverrideFromEntry,
+  splitGlossaryTerms,
+} from "../../lib/glossary";
 import { downloadBlob } from "../../lib/projectFile";
-import type { LangpackProjectPatch, LocaleCode, PhraseMapping } from "../../lib/types";
+import type { LangpackProjectPatch, LocaleCode, GlossaryEntry } from "../../lib/types";
 import type { LlmSettings } from "../../lib/llm";
 import { errorMessage, llmReferenceModeLabel, moveListItem } from "../../app/helpers";
 import type { StatusMessage } from "../../app/types";
@@ -38,8 +38,8 @@ export function SettingsPage({
   availableModels,
   loadingModels,
   refreshModels,
-  phraseMappings,
-  projectPhraseMappings,
+  glossaryEntries,
+  projectGlossary,
   hasRows,
   refreshConvertedValues,
   setProject,
@@ -58,8 +58,8 @@ export function SettingsPage({
   availableModels: string[];
   loadingModels: boolean;
   refreshModels: () => Promise<string[]>;
-  phraseMappings: PhraseMapping[];
-  projectPhraseMappings: LangpackProjectPatch["phraseMappings"];
+  glossaryEntries: GlossaryEntry[];
+  projectGlossary: LangpackProjectPatch["glossary"];
   hasRows: boolean;
   refreshConvertedValues: () => void;
   setProject: Dispatch<SetStateAction<LangpackProjectPatch>>;
@@ -71,29 +71,30 @@ export function SettingsPage({
   stateResetDisabled: boolean;
 }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
-  const [phraseQuery, setPhraseQuery] = useState("");
+  const [glossaryQuery, setGlossaryQuery] = useState("");
   const [targetLocaleDraft, setTargetLocaleDraft] = useState("");
   const sourceLabels = useContext(SourceLabelContext);
-  const filteredPhraseMappings = useMemo(() => {
-    const normalizedQuery = phraseQuery.trim().toLowerCase();
+  const visibleGlossaryLocales = useMemo(
+    () => uniqueLocaleCodes(["en_us", ...settings.targetLocales, ...CHINESE_LOCALES]),
+    [settings.targetLocales],
+  );
+  const filteredGlossaryEntries = useMemo(() => {
+    const normalizedQuery = glossaryQuery.trim().toLowerCase();
     if (!normalizedQuery) {
-      return phraseMappings;
+      return glossaryEntries;
     }
-    return phraseMappings.filter((mapping) =>
+    return glossaryEntries.filter((entry) =>
       [
-        mapping.id,
-        mapping.source,
-        mapping.en_us.join(" "),
-        mapping.zh_cn.join(" "),
-        mapping.zh_tw.join(" "),
-        mapping.zh_hk.join(" "),
-        mapping.note ?? "",
+        entry.id,
+        entry.source,
+        Object.values(entry.terms).flat().join(" "),
+        entry.note ?? "",
       ]
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery),
     );
-  }, [phraseMappings, phraseQuery]);
+  }, [glossaryEntries, glossaryQuery]);
 
   async function openModelMenu() {
     if (llmSettings.debugMode || loadingModels) {
@@ -107,86 +108,93 @@ export function SettingsPage({
     setModelMenuOpen(models.length > 0);
   }
 
-  function updatePhraseMapping(mapping: PhraseMapping, next: PhraseMapping) {
+  function updateGlossaryEntry(entry: GlossaryEntry, next: GlossaryEntry) {
     setProject((current) => ({
       ...current,
-      phraseMappings: {
-        ...(current.phraseMappings ?? {}),
-        [mapping.id]: phraseMappingOverrideFromMapping(next),
+      glossary: {
+        ...(current.glossary ?? {}),
+        [entry.id]: glossaryOverrideFromEntry(next),
       },
     }));
   }
 
-  function updatePhraseMappingField<K extends keyof PhraseMapping>(mapping: PhraseMapping, field: K, value: PhraseMapping[K]) {
-    updatePhraseMapping(mapping, { ...mapping, [field]: value });
+  function updateGlossaryEntryField<K extends keyof GlossaryEntry>(entry: GlossaryEntry, field: K, value: GlossaryEntry[K]) {
+    updateGlossaryEntry(entry, { ...entry, [field]: value });
   }
 
-  function resetPhraseMapping(id: string) {
-    setProject((current) => {
-      const next = { ...(current.phraseMappings ?? {}) };
-      delete next[id];
-      return { ...current, phraseMappings: next };
+  function updateGlossaryEntryTerms(entry: GlossaryEntry, locale: LocaleCode, terms: string[]) {
+    updateGlossaryEntry(entry, {
+      ...entry,
+      terms: {
+        ...entry.terms,
+        [locale]: terms,
+      },
     });
   }
 
-  function resetBuiltinPhraseMappings() {
-    setProject((current) => ({
-      ...current,
-      phraseMappings: Object.fromEntries(
-        Object.entries(current.phraseMappings ?? {}).filter(([id]) => !isBuiltinPhraseMapping(id)),
-      ),
-    }));
-    setStatus({ tone: "ok", text: "Curated Phrase Mapping overrides reset." });
+  function resetGlossaryEntry(id: string) {
+    setProject((current) => {
+      const next = { ...(current.glossary ?? {}) };
+      delete next[id];
+      return { ...current, glossary: next };
+    });
   }
 
-  function addCustomPhraseMapping() {
+  function resetBuiltinGlossaryEntries() {
+    setProject((current) => ({
+      ...current,
+      glossary: Object.fromEntries(
+        Object.entries(current.glossary ?? {}).filter(([id]) => !isBuiltinGlossaryEntry(id)),
+      ),
+    }));
+    setStatus({ tone: "ok", text: "Curated Glossary overrides reset." });
+  }
+
+  function addCustomGlossaryEntry() {
     const id = `custom.${Date.now().toString(36)}`;
-    const mapping: PhraseMapping = {
+    const entry: GlossaryEntry = {
       id,
       enabled: true,
       source: "custom",
-      en_us: [],
-      zh_cn: [],
-      zh_tw: [],
-      zh_hk: [],
+      terms: Object.fromEntries(visibleGlossaryLocales.map((locale) => [locale, []])),
     };
     setProject((current) => ({
       ...current,
-      phraseMappings: {
-        ...(current.phraseMappings ?? {}),
-        [id]: phraseMappingOverrideFromMapping(mapping),
+      glossary: {
+        ...(current.glossary ?? {}),
+        [id]: glossaryOverrideFromEntry(entry),
       },
     }));
-    setPhraseQuery("");
+    setGlossaryQuery("");
   }
 
-  async function importPhraseMappings(event: ChangeEvent<HTMLInputElement>) {
+  async function importGlossaryEntries(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) {
       return;
     }
     try {
-      const imported = normalizePhraseMappingOverrides(JSON.parse(await file.text()));
+      const imported = normalizeGlossaryOverrides(JSON.parse(await file.text()));
       setProject((current) => ({
         ...current,
-        phraseMappings: {
-          ...(current.phraseMappings ?? {}),
+        glossary: {
+          ...(current.glossary ?? {}),
           ...imported,
         },
       }));
-      setStatus({ tone: "ok", text: `Imported ${Object.keys(imported).length.toLocaleString()} phrase mapping override(s).` });
+      setStatus({ tone: "ok", text: `Imported ${Object.keys(imported).length.toLocaleString()} glossary override(s).` });
     } catch (error) {
       setStatus({ tone: "error", text: errorMessage(error) });
     }
   }
 
-  function exportPhraseMappings() {
-    const blob = new Blob([JSON.stringify({ schemaVersion: 1, phraseMappings: projectPhraseMappings ?? {} }, null, 2) + "\n"], {
+  function exportGlossaryEntries() {
+    const blob = new Blob([JSON.stringify({ schemaVersion: 1, glossary: projectGlossary ?? {} }, null, 2) + "\n"], {
       type: "application/json;charset=utf-8",
     });
-    downloadBlob(blob, "minecraft-phrase-mappings.json");
-    setStatus({ tone: "ok", text: "Phrase Mapping overrides exported." });
+    downloadBlob(blob, "minecraft-glossary.json");
+    setStatus({ tone: "ok", text: "Glossary overrides exported." });
   }
 
   function addTargetLocale(locale: string) {
@@ -434,89 +442,82 @@ export function SettingsPage({
           </div>
         </div>
       </section>
-      <section className="panel settingsPanel phraseMappingPanel">
+      <section className="panel settingsPanel glossaryPanel">
         <div className="panelHeader">
-          <h2>Phrase Mapping</h2>
-          <span className="panelNote">{filteredPhraseMappings.length.toLocaleString()} shown</span>
+          <h2>Glossary</h2>
+          <span className="panelNote">{filteredGlossaryEntries.length.toLocaleString()} shown</span>
         </div>
-        <div className="phraseMappingToolbar">
+        <div className="glossaryToolbar">
           <label className="searchBox">
             <Search size={16} />
-            <input value={phraseQuery} onChange={(event) => setPhraseQuery(event.target.value)} placeholder="Search mappings" />
+            <input value={glossaryQuery} onChange={(event) => setGlossaryQuery(event.target.value)} placeholder="Search glossary" />
           </label>
           <div className="buttonRow compact">
-            <button type="button" onClick={addCustomPhraseMapping}>
+            <button type="button" onClick={addCustomGlossaryEntry}>
               <FileJson size={16} />
               Add custom
             </button>
-            <button type="button" onClick={resetBuiltinPhraseMappings}>
+            <button type="button" onClick={resetBuiltinGlossaryEntries}>
               <RotateCcw size={16} />
               Reset curated
             </button>
-            <FilePicker label="Import" accept=".json" onChange={importPhraseMappings} icon={<Upload size={16} />} />
-            <button type="button" onClick={exportPhraseMappings}>
+            <FilePicker label="Import" accept=".json" onChange={importGlossaryEntries} icon={<Upload size={16} />} />
+            <button type="button" onClick={exportGlossaryEntries}>
               <Download size={16} />
               Export
             </button>
           </div>
         </div>
-        <div className="phraseMappingList">
-          {filteredPhraseMappings.map((mapping) => {
-            const builtin = isBuiltinPhraseMapping(mapping.id);
-            const overridden = Boolean(projectPhraseMappings?.[mapping.id]);
+        <div className="glossaryList">
+          {filteredGlossaryEntries.map((entry) => {
+            const builtin = isBuiltinGlossaryEntry(entry.id);
+            const overridden = Boolean(projectGlossary?.[entry.id]);
             return (
-              <article className="phraseMappingCard" key={mapping.id}>
-                <div className="phraseMappingCardHead">
+              <article className="glossaryCard" key={entry.id}>
+                <div className="glossaryCardHead">
                   <label className="checkboxControl">
                     <input
                       type="checkbox"
-                      checked={mapping.enabled}
-                      onChange={(event) => updatePhraseMappingField(mapping, "enabled", event.target.checked)}
+                      checked={entry.enabled}
+                      onChange={(event) => updateGlossaryEntryField(entry, "enabled", event.target.checked)}
                     />
                     Enabled
                   </label>
-                  <div className="phraseMappingIdentity">
-                    <strong>{mapping.id}</strong>
+                  <div className="glossaryIdentity">
+                    <strong>{entry.id}</strong>
                     <span>
-                      {mapping.source}
+                      {entry.source}
                       {overridden ? " override" : ""}
                     </span>
                   </div>
                   <div className="buttonRow compact">
                     {builtin ? (
-                      <button type="button" onClick={() => resetPhraseMapping(mapping.id)} disabled={!overridden}>
+                      <button type="button" onClick={() => resetGlossaryEntry(entry.id)} disabled={!overridden}>
                         <RotateCcw size={16} />
                         Reset
                       </button>
                     ) : (
-                      <button type="button" className="danger" onClick={() => resetPhraseMapping(mapping.id)}>
+                      <button type="button" className="danger" onClick={() => resetGlossaryEntry(entry.id)}>
                         <Trash2 size={16} />
                         Delete
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="phraseMappingGrid">
-                  <label>
-                    en_us
-                    <input
-                      value={joinPhraseTerms(mapping.en_us)}
-                      onChange={(event) => updatePhraseMappingField(mapping, "en_us", splitPhraseTerms(event.target.value))}
-                    />
-                  </label>
-                  {CHINESE_LOCALES.map((locale) => (
+                <div className="glossaryGrid">
+                  {visibleGlossaryLocales.map((locale) => (
                     <label key={locale}>
                       {locale}
                       <input
-                        value={joinPhraseTerms(mapping[locale])}
-                        onChange={(event) => updatePhraseMappingField(mapping, locale, splitPhraseTerms(event.target.value))}
+                        value={joinGlossaryTerms(entry.terms[locale] ?? [])}
+                        onChange={(event) => updateGlossaryEntryTerms(entry, locale, splitGlossaryTerms(event.target.value))}
                       />
                     </label>
                   ))}
                 </div>
                 <label>
                   Note
-                  <input value={mapping.note ?? ""} onChange={(event) => updatePhraseMappingField(mapping, "note", event.target.value)} />
+                  <input value={entry.note ?? ""} onChange={(event) => updateGlossaryEntryField(entry, "note", event.target.value)} />
                 </label>
               </article>
             );

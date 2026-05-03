@@ -28,7 +28,7 @@ import type {
   EntryId,
   LangpackProjectPatch,
   ModScanResult,
-  PhraseMapping,
+  GlossaryEntry,
   SourcePackScanResult,
 } from "../../lib/types";
 
@@ -43,7 +43,7 @@ interface UseLlmTranslationOptions {
   setProject: Dispatch<SetStateAction<LangpackProjectPatch>>;
   modScan: ModScanResult;
   sourcePacks: SourcePackScanResult[];
-  runtimePhraseMappings: PhraseMapping[];
+  runtimeGlossary: GlossaryEntry[];
   settings: AppSettings;
   llmSettings: LlmSettings;
   setStatus: Dispatch<SetStateAction<StatusMessage>>;
@@ -69,7 +69,7 @@ export function useLlmTranslation({
   setProject,
   modScan,
   sourcePacks,
-  runtimePhraseMappings,
+  runtimeGlossary,
   settings,
   llmSettings,
   setStatus,
@@ -342,7 +342,7 @@ export function useLlmTranslation({
           const abortController = new AbortController();
           control.abortControllers.add(abortController);
           try {
-            await translateJobsWithLlm(llmSettings, chunk, modScan.translations, sourcePacks, runtimePhraseMappings, {
+            await translateJobsWithLlm(llmSettings, chunk, modScan.translations, sourcePacks, runtimeGlossary, {
               signal: abortController.signal,
               fallbackChains: settings.fallbackChains,
               convertSources: settings.convertSources,
