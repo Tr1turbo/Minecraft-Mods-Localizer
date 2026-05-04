@@ -5,9 +5,9 @@
 
 .colorLegendRow {
   align-items: center;
-  background: #f7f9fb;
-  border: 1px solid #e0e7ee;
-  border-radius: 6px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   display: grid;
   gap: 8px;
   grid-template-columns: 88px 28px repeat(3, minmax(74px, auto));
@@ -16,7 +16,7 @@
 }
 
 .colorLegendRow code {
-  color: #536171;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -44,15 +44,32 @@
 
 .fallbackEditor {
   align-items: start;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
   display: grid;
   gap: 10px;
   grid-template-columns: 72px minmax(0, 1fr);
+  margin: 0 -7px;
+  padding: 7px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.fallbackEditor.active {
+  background: var(--surface-soft);
+  border-color: var(--primary-border);
 }
 
 .fallbackTarget {
-  color: #344253;
+  color: var(--text);
   font-weight: 700;
   padding-top: 7px;
+}
+
+.fallbackChainControl {
+  display: grid;
+  min-width: 0;
 }
 
 .fallbackList {
@@ -61,32 +78,161 @@
   flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
+  position: relative;
+}
+
+.localeOrderList {
+  touch-action: none;
+  user-select: none;
 }
 
 .fallbackChip {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #cbd5df;
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   display: inline-flex;
   gap: 4px;
   min-height: 32px;
   padding: 3px 4px 3px 9px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 .fallbackChip span {
-  color: #344253;
+  color: var(--text);
   font-weight: 700;
 }
 
+.fallbackChip.draggable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.fallbackChip.draggable:active {
+  cursor: grabbing;
+}
+
+.fallbackChip.dragging {
+  border-width: 0;
+  flex: 0 0 0;
+  gap: 0;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+  transform: scaleX(0);
+  width: 0;
+}
+
+.fallbackChip.dragging > * {
+  display: none;
+}
+
 .fallbackChip.locked {
-  background: #f2f5f8;
-  color: #667586;
+  background: var(--surface-strong);
+  color: var(--text-muted);
   padding-right: 9px;
 }
 
 .fallbackChip.locked span {
-  color: #667586;
+  color: var(--text-muted);
+}
+
+.fallbackOptionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fallbackPool {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+}
+
+.fallbackOptionList.shared {
+  max-height: 84px;
+  overflow: auto;
+  padding: 1px;
+}
+
+.fallbackOption {
+  align-items: center;
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: grab;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  justify-content: center;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 9px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.fallbackOption:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.fallbackOption.selected {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  box-shadow: inset 0 0 0 1px var(--primary-border);
+  color: var(--primary);
+}
+
+.fallbackOption.selected:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+.fallbackOption.blocked {
+  color: var(--text-soft);
+  opacity: 0.58;
+}
+
+.fallbackOption:active {
+  cursor: grabbing;
+}
+
+.fallbackOption.dragging {
+  border-width: 0;
+  flex: 0 0 0;
+  height: 0;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+  transform: scaleX(0);
+  width: 0;
+}
+
+.fallbackOption.dragging > * {
+  display: none;
 }
 
 .miniIconButton {
@@ -96,13 +242,284 @@
 }
 
 .miniIconButton.danger {
-  color: #a33b3b;
+  color: var(--danger);
 }
 
-.fallbackAdd {
-  height: 32px;
+.targetLocalePicker {
+  display: grid;
+  gap: 10px;
+}
+
+.targetLocaleSearch {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.targetLocaleSearch svg {
+  color: var(--text-soft);
+}
+
+.targetLocaleSearch input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-height: 34px;
+  padding-left: 0;
+}
+
+.targetLocaleSearch:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+}
+
+.targetLocaleOptions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  max-height: 248px;
+  overflow: auto;
+  padding: 1px;
+}
+
+.targetLocaleOption {
+  align-items: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  display: grid;
+  height: auto;
+  justify-content: normal;
+  min-height: 54px;
+  padding: 10px;
+  text-align: left;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.targetLocaleOption:hover {
+  background: var(--surface-soft);
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 20px rgb(27 42 58 / 0.07);
+  transform: translateY(-1px);
+}
+
+.targetLocaleOption.active {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  box-shadow: inset 0 0 0 1px var(--primary-border);
+  color: var(--primary);
+}
+
+.targetLocaleOption.active:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  transform: none;
+}
+
+.targetLocaleText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.targetLocaleText strong,
+.targetLocaleText small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.targetLocaleText strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.targetLocaleOption.active .targetLocaleText strong {
+  color: var(--primary);
+}
+
+.targetLocaleOption.active .targetLocaleText small {
+  color: var(--primary-strong);
+}
+
+.targetLocaleText small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.targetLocaleCustom {
+  display: grid;
+  gap: 6px;
+}
+
+.targetLocaleCustom > label,
+.targetLocaleSelectedHeader,
+.targetLocaleOrderTitle {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.targetLocaleCustomRow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.targetLocaleError {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.targetLocaleSelected {
+  display: grid;
+  gap: 7px;
+}
+
+.targetLocaleSelectedHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.targetLocaleSelectedList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
   min-height: 32px;
-  min-width: 134px;
-  padding: 4px 28px 4px 8px;
-  width: auto;
+  position: relative;
+}
+
+.targetLocaleChip {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: grab;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 32px;
+  padding: 4px 5px 4px 10px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.targetLocaleChip:active {
+  cursor: grabbing;
+}
+
+.targetLocaleChip.dragging {
+  border-width: 0;
+  flex: 0 0 0;
+  gap: 0;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+  transform: scaleX(0);
+  width: 0;
+}
+
+.targetLocaleChip.dragging > * {
+  display: none;
+}
+
+.targetLocaleChip b {
+  color: var(--text);
+}
+
+.targetLocaleChip small {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.targetLocaleChip button {
+  height: 24px;
+  padding: 0;
+  width: 24px;
+}
+
+.localeInsertPlaceholder {
+  animation: localePlaceholderIn 170ms ease-out;
+  background: var(--surface-strong);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px rgb(132 146 163 / 0.08);
+  flex: 0 0 78px;
+  min-height: 32px;
+}
+
+.localeDragGhost {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-control);
+  color: var(--text);
+  display: inline-flex;
+  gap: 5px;
+  left: 0;
+  min-height: 32px;
+  padding: 4px 9px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  z-index: 80;
+}
+
+.localeDragGhost span {
+  font-weight: 800;
+}
+
+.targetLocaleSelectedList .localeInsertPlaceholder {
+  border-radius: 999px;
+  flex-basis: 112px;
+}
+
+@keyframes localePlaceholderIn {
+  from {
+    flex-basis: 0;
+    opacity: 0;
+    transform: scaleX(0.72);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.targetLocaleEmpty {
+  background: var(--surface-soft);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-panel);
+  color: var(--text-muted);
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+}
+
+.targetLocaleEmpty.compact {
+  padding: 9px 10px;
 }

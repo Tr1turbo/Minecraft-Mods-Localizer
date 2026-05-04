@@ -15,6 +15,7 @@ import {
 
 import { BROWSER_DRAFT_SCHEMA_VERSION, EMPTY_SCAN } from "./app/constants";
 import { useBrowserDraftPersistence } from "./app/hooks/useBrowserDraftPersistence";
+import { I18nProvider, translate } from "./app/i18n";
 import { useLlmTranslation } from "./app/hooks/useLlmTranslation";
 import { SourceLabelContext } from "./app/sourceLabels";
 import type { BrowserDraftState, PageId, StatusMessage } from "./app/types";
@@ -35,9 +36,11 @@ import {
   translationJobsForRows,
 } from "./app/helpers";
 import { FilePicker } from "./components/FilePicker";
+import { ThemeModeSwitcher } from "./components/ThemeModeSwitcher";
 import { NamespaceWorkspace } from "./features/namespace/NamespaceWorkspace";
 import { ProjectPage } from "./features/project/ProjectPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { SetupPage } from "./features/setup/SetupPage";
 import { SourcesPage } from "./features/sources/SourcesPage";
 import { createResourcePackZip } from "./lib/exportPack";
 import { createPatchedJarDownload } from "./lib/exportJars";
@@ -66,7 +69,7 @@ import type {
   ResolvedEntry,
   SourcePackScanResult,
 } from "./lib/types";
-import { effectiveTargetLocales, normalizeLocaleCode } from "./lib/locales";
+import { effectiveTargetLocales, normalizeLocaleCode, uniqueLocaleCodes } from "./lib/locales";
 import { compareNamespaceNames } from "./lib/vanilla";
 import { type LlmSettings } from "./lib/llm";
 import {
@@ -78,6 +81,7 @@ import {
   createDefaultDeploymentDefaults,
   createDefaultLlmSettings,
   createDefaultSourceLabels,
+  defaultFallbackChainForLocale,
   mergeAppSettings,
   mergeLlmSettings,
   SOURCE_LABEL_ORDER,
@@ -110,6 +114,9 @@ function App() {
   const [deploymentDefaults, setDeploymentDefaults] = useState<DeploymentDefaults>(() => createDefaultDeploymentDefaults());
   const [sourceLabels, setSourceLabels] = useState<SourceLabelSettings>(() => createDefaultSourceLabels());
   const [llmSettings, setLlmSettings] = useState<LlmSettings>(() => createDefaultLlmSettings());
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+  );
 
   const glossaryEntries = useMemo(() => effectiveGlossaryEntries(project.glossary), [project.glossary]);
   const runtimeGlossary = useMemo(() => glossaryWithInternalVanilla(glossaryEntries), [glossaryEntries]);
@@ -269,7 +276,7 @@ function App() {
     [inlineDrafts, manualDraft, modScan.fingerprints.length, project, selectedEntry, sourcePacks.length],
   );
 
-  const { pauseAutosave, resetSavedModFileKey, resumeAutosave, restoredManualDraftRef } = useBrowserDraftPersistence({
+  const { draftHydrated, pauseAutosave, resetSavedModFileKey, resumeAutosave, restoredManualDraftRef } = useBrowserDraftPersistence({
     draftState,
     hasRestorableProgress,
     busy,
@@ -293,6 +300,25 @@ function App() {
     setSourceLabels,
     setStatus,
   });
+  const resolvedTheme = settings.themeMode === "system" ? systemTheme : settings.themeMode;
+  const t = useMemo(() => (key: string, values?: Record<string, string | number>) => translate(settings.appLocale, key, values), [settings.appLocale]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mediaQuery) {
+      return;
+    }
+    const updateSystemTheme = () => setSystemTheme(mediaQuery.matches ? "dark" : "light");
+    updateSystemTheme();
+    mediaQuery.addEventListener("change", updateSystemTheme);
+    return () => mediaQuery.removeEventListener("change", updateSystemTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.themeMode = settings.themeMode;
+    document.documentElement.style.colorScheme = resolvedTheme;
+  }, [resolvedTheme, settings.themeMode]);
 
   useEffect(() => {
     if (activePage.startsWith("namespace:") && activeNamespace && !namespaces.includes(activeNamespace)) {
@@ -759,38 +785,100 @@ function App() {
     }
   }
 
+  function completeSetup({
+    appLocale,
+    targetLocales,
+    themeMode,
+  }: {
+    appLocale: AppSettings["appLocale"];
+    targetLocales: LocaleCode[];
+    themeMode: AppSettings["themeMode"];
+  }) {
+    const normalizedTargetLocales = uniqueLocaleCodes(targetLocales.length ? targetLocales : ["zh_tw"]);
+    const primaryTargetLocale = normalizedTargetLocales[0] ?? "zh_tw";
+    setSettings((current) => {
+      const fallbackChains = { ...current.fallbackChains };
+      for (const locale of normalizedTargetLocales) {
+        fallbackChains[locale] = fallbackChains[locale] ?? defaultFallbackChainForLocale(locale);
+      }
+      return {
+        ...current,
+        appLocale,
+        themeMode,
+        setupComplete: true,
+        targetLocales: normalizedTargetLocales,
+        fallbackChains,
+      };
+    });
+    setActiveLocale(primaryTargetLocale);
+    setReferenceFallbackLocale(primaryTargetLocale);
+    setStatus({ tone: "ok", text: "Setup complete." });
+  }
+
   const headerStatusText = translationProgress
     ? translationHeaderText(translationProgress)
     : busy || translating
       ? "Working..."
       : status.text;
+  const displayedStatusText = t(headerStatusText);
+
+  if (!draftHydrated) {
+    return (
+      <I18nProvider locale={settings.appLocale}>
+        <main className="setupShell">
+          <section className="setupPanel compact">
+            <div className="setupBrand">
+              <img src={appIconPath} alt="" aria-hidden="true" />
+              <div>
+                <h1>{t("Minecraft Mods Localizer")}</h1>
+                <p>{t("Restoring browser draft...")}</p>
+              </div>
+            </div>
+          </section>
+        </main>
+      </I18nProvider>
+    );
+  }
+
+  if (!settings.setupComplete) {
+    return (
+      <I18nProvider locale={settings.appLocale}>
+        <SetupPage
+          initialAppLocale={settings.appLocale}
+          initialTargetLocales={settings.targetLocales}
+          initialThemeMode={settings.themeMode}
+          onComplete={completeSetup}
+          onThemeModeChange={(themeMode) => setSettings((current) => ({ ...current, themeMode }))}
+        />
+      </I18nProvider>
+    );
+  }
 
   return (
-    <SourceLabelContext.Provider value={sourceLabels}>
-      <main className="appShell">
+    <I18nProvider locale={settings.appLocale}>
+      <SourceLabelContext.Provider value={sourceLabels}>
+      <main className="appShell" data-theme={resolvedTheme}>
       <header className="topBar">
-        <div className="brandBlock">
-          <img className="brandIcon" src={appIconPath} alt="" aria-hidden="true" />
-          <div>
-            <h1>Minecraft Mods Localizer</h1>
-            <div className={`statusLine ${status.tone}`}>{headerStatusText}</div>
-          </div>
+        <div className="statusBlock">
+          <span>{t("Status")}</span>
+          <div className={`statusLine ${status.tone}`}>{displayedStatusText}</div>
         </div>
         <div className="topActions">
-          <FilePicker label="Mods" accept=".jar" multiple onChange={handleModFiles} icon={<Upload size={16} />} />
-          <FilePicker label="Update From" accept=".zip" multiple onChange={handleSourcePackFiles} icon={<Upload size={16} />} />
-          <FilePicker label="Patch" accept=".json" onChange={handleProjectPatch} icon={<FileJson size={16} />} />
+          <ThemeModeSwitcher value={settings.themeMode} onChange={(themeMode) => setSettings((current) => ({ ...current, themeMode }))} t={t} />
+          <FilePicker label={t("Mods")} accept=".jar" multiple onChange={handleModFiles} icon={<Upload size={16} />} />
+          <FilePicker label={t("Update From")} accept=".zip" multiple onChange={handleSourcePackFiles} icon={<Upload size={16} />} />
+          <FilePicker label={t("Patch")} accept=".json" onChange={handleProjectPatch} icon={<FileJson size={16} />} />
           <button type="button" onClick={exportProjectPatch}>
             <Download size={16} />
-            Patch
+            {t("Patch")}
           </button>
           <button type="button" className="primary" onClick={exportResourcePack}>
             <Download size={16} />
-            Zip
+            {t("Zip")}
           </button>
           <button type="button" onClick={exportPatchedJars}>
             <Download size={16} />
-            Jars
+            {t("Jars")}
           </button>
         </div>
       </header>
@@ -800,25 +888,31 @@ function App() {
         style={{ ["--inspector-width" as string]: `${settings.inspectorWidth}px` }}
       >
         <aside className="leftPane">
-          <nav className="pageNav" aria-label="Pages">
+          <div className="brandBlock">
+            <img className="brandIcon" src={appIconPath} alt="" aria-hidden="true" />
+            <div>
+              <h1>{t("Minecraft Mods Localizer")}</h1>
+            </div>
+          </div>
+          <nav className="pageNav" aria-label={t("Pages")}>
             <button type="button" className={activePage === "project" ? "active" : ""} onClick={() => setActivePage("project")}>
               <Package size={16} />
-              Project
+              {t("Project")}
             </button>
             <button type="button" className={activePage === "sources" ? "active" : ""} onClick={() => setActivePage("sources")}>
               <Upload size={16} />
-              Update From
+              {t("Update From")}
             </button>
             <button type="button" className={activePage === "settings" ? "active" : ""} onClick={() => setActivePage("settings")}>
               <Settings size={16} />
-              Settings
+              {t("Settings")}
             </button>
           </nav>
 
           <section className="namespaceNav">
-            <div className="navSectionTitle">Namespaces</div>
+            <div className="navSectionTitle">{t("Namespaces")}</div>
             {namespaces.length === 0 ? (
-              <div className="emptyState">{modScan.fingerprints.length && settings.targetLocales.length === 0 ? "Add target locale" : "Load mod jars"}</div>
+              <div className="emptyState">{modScan.fingerprints.length && settings.targetLocales.length === 0 ? t("Add target locale") : t("Load mod jars")}</div>
             ) : (
               namespaces.map((namespace) => (
                 <button
@@ -948,6 +1042,7 @@ function App() {
       </section>
       </main>
     </SourceLabelContext.Provider>
+    </I18nProvider>
   );
 }
 

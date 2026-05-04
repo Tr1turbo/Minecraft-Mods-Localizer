@@ -1,7 +1,9 @@
 import { Check, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SourceBadge } from "../../components/SourceBadge";
+import { Tooltip } from "../../components/Tooltip";
 import { formatPatchTime, isActiveLlmCandidate, llmCandidateKey } from "../../app/helpers";
+import { useI18n } from "../../app/i18n";
 import type { LlmLiveOutput } from "../../app/types";
 import type { PatchValue } from "../../lib/types";
 
@@ -22,34 +24,37 @@ export function LlmCandidatesPanel({
   useCandidate: (candidate: PatchValue, index: number) => void;
   deleteCandidate: (candidate: PatchValue, index: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <section className="llmCandidatePanel">
       <div className="panelHeader">
-        <h2>LLM generated</h2>
-        <span className="candidateCount">{candidates.length} saved</span>
+        <h2>{t("LLM generated")}</h2>
+        <span className="candidateCount">{t("{count} saved", { count: candidates.length })}</span>
       </div>
       <div className="llmCandidateList">
         {candidates.map((candidate, index) => {
           const active = isActiveLlmCandidate(activePatch, candidate, index);
           const animating = active && displayDraft !== undefined;
+          const displayedValue = animating ? displayDraft : candidate.value;
+          const multiline = isMultilineValue(displayedValue);
           return (
             <article className={`llmCandidateCard ${active ? "active" : ""}`} key={llmCandidateKey(candidate, index)}>
               <div className="llmCandidateMeta">
                 <SourceBadge source="llm" />
                 <span>{candidate.meta?.model ?? "LLM"}</span>
                 <time>{formatPatchTime(candidate.updatedAt)}</time>
-                {active ? <strong>Active</strong> : null}
+                {active ? <strong>{t("Active")}</strong> : null}
               </div>
-              <pre>{animating ? displayDraft : candidate.value}</pre>
-              <div className="buttonRow compact">
-                <button type="button" onClick={() => useCandidate(candidate, index)} disabled={active}>
-                  <Check size={16} />
-                  Use
-                </button>
-                <button type="button" onClick={() => deleteCandidate(candidate, index)} disabled={animating}>
-                  <Trash2 size={16} />
-                  Delete
-                </button>
+              <div className={`llmCandidateValueFrame ${multiline ? "multiLine" : "singleLine"}`}>
+                <pre>{displayedValue}</pre>
+                <CandidateActions
+                  useLabel={t("Use")}
+                  deleteLabel={t("Delete")}
+                  useDisabled={active}
+                  deleteDisabled={animating}
+                  onUse={() => useCandidate(candidate, index)}
+                  onDelete={() => deleteCandidate(candidate, index)}
+                />
               </div>
             </article>
           );
@@ -59,24 +64,57 @@ export function LlmCandidatesPanel({
             <div className="llmCandidateMeta">
               <SourceBadge source="llm" />
               <span>{model || "LLM"}</span>
-              <strong>Generating</strong>
+              <strong>{t("Generating")}</strong>
             </div>
-            <pre>{liveOutput.text || <PendingLlmText />}</pre>
-            <div className="buttonRow compact">
-              <button type="button" disabled>
-                <Check size={16} />
-                Use
-              </button>
-              <button type="button" disabled>
-                <Trash2 size={16} />
-                Delete
-              </button>
+            <div className={`llmCandidateValueFrame ${isMultilineValue(liveOutput.text) ? "multiLine" : "singleLine"}`}>
+              <pre>{liveOutput.text || <PendingLlmText />}</pre>
+              <CandidateActions
+                useLabel={t("Use")}
+                deleteLabel={t("Delete")}
+                useDisabled
+                deleteDisabled
+              />
             </div>
           </article>
         ) : null}
       </div>
     </section>
   );
+}
+
+function CandidateActions({
+  useLabel,
+  deleteLabel,
+  useDisabled,
+  deleteDisabled,
+  onUse,
+  onDelete,
+}: {
+  useLabel: string;
+  deleteLabel: string;
+  useDisabled?: boolean;
+  deleteDisabled?: boolean;
+  onUse?: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div className="llmCandidateActions" aria-label={`${useLabel} / ${deleteLabel}`}>
+      <Tooltip content={useLabel} className="inspectorActionTooltip">
+        <button type="button" className="inspectorActionButton" onClick={onUse} disabled={useDisabled} aria-label={useLabel}>
+          <Check size={17} />
+        </button>
+      </Tooltip>
+      <Tooltip content={deleteLabel} className="inspectorActionTooltip">
+        <button type="button" className="inspectorActionButton danger" onClick={onDelete} disabled={deleteDisabled} aria-label={deleteLabel}>
+          <Trash2 size={17} />
+        </button>
+      </Tooltip>
+    </div>
+  );
+}
+
+function isMultilineValue(value: string | undefined) {
+  return Boolean(value && /\r|\n/.test(value));
 }
 
 const THINKING_WORDS = [
@@ -96,10 +134,11 @@ const THINKING_WORDS = [
   "Divining",
   "Imagining",
   "Translating",
-  "Creeping"
+  "Translating"
 ];
 
 function PendingLlmText() {
+  const { t } = useI18n();
   const [wordIndex, setWordIndex] = useState(() =>
     Math.floor(Math.random() * THINKING_WORDS.length),
   );
@@ -143,7 +182,7 @@ function PendingLlmText() {
   }, [word]);
 
   return (
-    <span className="pendingLlmText" aria-label="Waiting for LLM output">
+    <span className="pendingLlmText" aria-label={t("Waiting for LLM output")}>
       <span className="pendingLlmSpinner" />
       <span className="pendingLlmLabel">{typed}</span>
       <span className="pendingLlmCaret" aria-hidden="true" />

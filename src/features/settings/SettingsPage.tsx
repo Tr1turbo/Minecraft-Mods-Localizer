@@ -1,21 +1,26 @@
-import { ArrowDown, ArrowLeftRight, Check, Download, FileJson, Loader2, RotateCcw, Search, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowLeftRight, Download, FileJson, Loader2, RotateCcw, Search, Trash2, Upload } from "lucide-react";
 import { type ChangeEvent, type Dispatch, type SetStateAction, useContext, useMemo, useState } from "react";
 import { SourceBadge } from "../../components/SourceBadge";
 import { FilePicker } from "../../components/FilePicker";
+import { TargetLocalePicker } from "../../components/TargetLocalePicker";
+import { ThemeModeSwitcher } from "../../components/ThemeModeSwitcher";
+import { useI18n } from "../../app/i18n";
 import { SourceLabelContext } from "../../app/sourceLabels";
 import { FallbackChainEditor } from "./FallbackChainEditor";
-import { LocaleOrderList } from "./LocaleOrderList";
+import { FallbackOptionsPool, type FallbackPoolDrag } from "./FallbackOptionsPool";
+import { LocaleOrderList, resolveLocaleOrderDropIndex } from "./LocaleOrderList";
 import {
   CONVERT_SOURCE_ORDER,
   LLM_REFERENCE_MODES,
   SOURCE_LABEL_ORDER,
+  APP_LOCALES,
   type AppSettings,
   type SourceLabelSettings,
   clamp,
   defaultFallbackChainForLocale,
   normalizeFallbackChain,
 } from "../../lib/deploymentConfig";
-import { BUNDLED_LOCALE_CODES, CHINESE_LOCALES, isValidLocaleCode, normalizeLocaleCode, uniqueLocaleCodes } from "../../lib/locales";
+import { BUNDLED_LOCALE_CODES, CHINESE_LOCALES, uniqueLocaleCodes } from "../../lib/locales";
 import {
   isBuiltinGlossaryEntry,
   joinGlossaryTerms,
@@ -26,7 +31,7 @@ import {
 import { downloadBlob } from "../../lib/projectFile";
 import type { LangpackProjectPatch, LocaleCode, GlossaryEntry } from "../../lib/types";
 import type { LlmSettings } from "../../lib/llm";
-import { errorMessage, llmReferenceModeLabel, moveListItem } from "../../app/helpers";
+import { errorMessage, llmReferenceModeLabel } from "../../app/helpers";
 import type { StatusMessage } from "../../app/types";
 
 export function SettingsPage({
@@ -72,8 +77,16 @@ export function SettingsPage({
 }) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [glossaryQuery, setGlossaryQuery] = useState("");
-  const [targetLocaleDraft, setTargetLocaleDraft] = useState("");
+  const [activeFallbackLocale, setActiveFallbackLocale] = useState<LocaleCode | null>(null);
+  const [fallbackPoolDrag, setFallbackPoolDrag] = useState<(FallbackPoolDrag & { targetLocale: LocaleCode | null; dropIndex: number | null }) | null>(null);
   const sourceLabels = useContext(SourceLabelContext);
+  const { t } = useI18n();
+  const resolvedActiveFallbackLocale = settings.targetLocales.includes(activeFallbackLocale ?? "")
+    ? activeFallbackLocale
+    : settings.targetLocales[0] ?? null;
+  const activeFallbackChain = resolvedActiveFallbackLocale
+    ? normalizeFallbackChain(resolvedActiveFallbackLocale, settings.fallbackChains[resolvedActiveFallbackLocale] ?? []).filter((fallbackLocale) => fallbackLocale !== "en_us")
+    : [];
   const visibleGlossaryLocales = useMemo(
     () => uniqueLocaleCodes(["en_us", ...settings.targetLocales, ...CHINESE_LOCALES]),
     [settings.targetLocales],
@@ -183,7 +196,7 @@ export function SettingsPage({
           ...imported,
         },
       }));
-      setStatus({ tone: "ok", text: `Imported ${Object.keys(imported).length.toLocaleString()} glossary override(s).` });
+      setStatus({ tone: "ok", text: t("Imported {count} glossary override(s).", { count: Object.keys(imported).length.toLocaleString() }) });
     } catch (error) {
       setStatus({ tone: "error", text: errorMessage(error) });
     }
@@ -197,96 +210,158 @@ export function SettingsPage({
     setStatus({ tone: "ok", text: "Glossary overrides exported." });
   }
 
-  function addTargetLocale(locale: string) {
-    const normalized = normalizeLocaleCode(locale);
-    if (!isValidLocaleCode(normalized)) {
-      setStatus({ tone: "warn", text: "Enter a valid Minecraft locale code." });
-      return;
-    }
+  function updateTargetLocales(locales: LocaleCode[]) {
+    const nextLocales = uniqueLocaleCodes(locales);
     setSettings((current) => {
-      if (current.targetLocales.includes(normalized)) {
-        return current;
+      const fallbackChains = Object.fromEntries(
+        Object.entries(current.fallbackChains).filter(([locale]) => nextLocales.includes(locale)),
+      ) as AppSettings["fallbackChains"];
+      for (const locale of nextLocales) {
+        fallbackChains[locale] = current.fallbackChains[locale] ?? defaultFallbackChainForLocale(locale);
       }
       return {
         ...current,
-        targetLocales: [...current.targetLocales, normalized],
-        fallbackChains: {
-          ...current.fallbackChains,
-          [normalized]: current.fallbackChains[normalized] ?? defaultFallbackChainForLocale(normalized),
-        },
-      };
-    });
-    setTargetLocaleDraft("");
-  }
-
-  function removeTargetLocale(locale: LocaleCode) {
-    setSettings((current) => {
-      const fallbackChains = { ...current.fallbackChains };
-      delete fallbackChains[locale];
-      return {
-        ...current,
-        targetLocales: current.targetLocales.filter((item) => item !== locale),
+        targetLocales: nextLocales,
         fallbackChains,
       };
     });
   }
 
-  function moveTargetLocale(index: number, delta: number) {
+  function updateFallbackChain(locale: LocaleCode, chain: string[]) {
     setSettings((current) => ({
       ...current,
-      targetLocales: moveListItem(current.targetLocales, index, delta),
+      fallbackChains: {
+        ...current.fallbackChains,
+        [locale]: normalizeFallbackChain(locale, chain),
+      },
     }));
   }
 
-  const targetSuggestions = BUNDLED_LOCALE_CODES.filter((locale) => !settings.targetLocales.includes(locale));
+  function movableFallbackChain(locale: LocaleCode, sourceSettings = settings) {
+    return normalizeFallbackChain(locale, sourceSettings.fallbackChains[locale] ?? []).filter((fallbackLocale) => fallbackLocale !== "en_us") as LocaleCode[];
+  }
+
+  function resolveFallbackPoolTarget(fallbackLocale: LocaleCode, x: number, y: number) {
+    if (typeof document === "undefined") {
+      return null;
+    }
+    const hit = document.elementFromPoint(x, y);
+    const editor = hit?.closest<HTMLElement>("[data-fallback-chain-locale]");
+    const targetLocale = editor?.dataset.fallbackChainLocale as LocaleCode | undefined;
+    if (!editor || !targetLocale || !settings.targetLocales.includes(targetLocale)) {
+      return null;
+    }
+    if (fallbackLocale === targetLocale || fallbackLocale === "en_us") {
+      return { targetLocale, dropIndex: null };
+    }
+    const list = editor.querySelector<HTMLElement>("[data-locale-order-list]");
+    const chain = movableFallbackChain(targetLocale);
+    const fallbackIndex = chain.filter((locale) => locale !== fallbackLocale).length;
+    return {
+      targetLocale,
+      dropIndex: resolveLocaleOrderDropIndex(list, x, y, fallbackLocale, fallbackIndex),
+    };
+  }
+
+  function insertFallbackIntoChain(targetLocale: LocaleCode, fallbackLocale: LocaleCode, targetIndex?: number) {
+    if (fallbackLocale === targetLocale || fallbackLocale === "en_us") {
+      return;
+    }
+    setActiveFallbackLocale(targetLocale);
+    setSettings((current) => {
+      const chain = movableFallbackChain(targetLocale, current);
+      const next = chain.filter((locale) => locale !== fallbackLocale);
+      const boundedIndex = Math.max(0, Math.min(targetIndex ?? next.length, next.length));
+      next.splice(boundedIndex, 0, fallbackLocale);
+      return {
+        ...current,
+        fallbackChains: {
+          ...current.fallbackChains,
+          [targetLocale]: normalizeFallbackChain(targetLocale, next),
+        },
+      };
+    });
+  }
+
+  function addFallbackToActive(fallbackLocale: LocaleCode) {
+    if (!resolvedActiveFallbackLocale || fallbackLocale === resolvedActiveFallbackLocale || fallbackLocale === "en_us" || activeFallbackChain.includes(fallbackLocale)) {
+      return;
+    }
+    insertFallbackIntoChain(resolvedActiveFallbackLocale, fallbackLocale);
+  }
+
+  function previewFallbackPoolDrag(drag: FallbackPoolDrag) {
+    const target = resolveFallbackPoolTarget(drag.locale, drag.x, drag.y);
+    if (target) {
+      setActiveFallbackLocale(target.targetLocale);
+    }
+    setFallbackPoolDrag({
+      ...drag,
+      targetLocale: target?.targetLocale ?? null,
+      dropIndex: target?.dropIndex ?? null,
+    });
+  }
+
+  function finishFallbackPoolDrag(drag: FallbackPoolDrag) {
+    const target = resolveFallbackPoolTarget(drag.locale, drag.x, drag.y);
+    if (target && target.dropIndex !== null) {
+      insertFallbackIntoChain(target.targetLocale, drag.locale, target.dropIndex);
+    }
+    setFallbackPoolDrag(null);
+  }
+
   const fallbackSuggestions = uniqueLocaleCodes([...settings.targetLocales, ...BUNDLED_LOCALE_CODES]);
+  const sharedFallbackOptions = fallbackSuggestions.filter((fallbackLocale) => fallbackLocale !== "en_us");
 
   return (
     <section className="pagePane">
       <div className="pageTitle">
-        <h2>Settings</h2>
+        <h2>{t("Settings")}</h2>
         {translating ? <Loader2 size={16} className="spin" /> : null}
       </div>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Target locales</h2>
-          <span className="panelNote">{settings.targetLocales.length.toLocaleString()} selected</span>
+          <h2>{t("Target locales")}</h2>
+          <span className="panelNote">{t("{count} selected", { count: settings.targetLocales.length.toLocaleString() })}</span>
         </div>
-        <div className="localeManageControls">
-          <select
-            value=""
-            onChange={(event) => {
-              if (event.target.value) {
-                addTargetLocale(event.target.value);
-              }
-            }}
-          >
-            <option value="">Add bundled locale</option>
-            {targetSuggestions.map((locale) => (
-              <option key={locale} value={locale}>
-                {locale}
-              </option>
-            ))}
-          </select>
-          <input value={targetLocaleDraft} onChange={(event) => setTargetLocaleDraft(event.target.value)} placeholder="custom code" />
-          <button type="button" onClick={() => addTargetLocale(targetLocaleDraft)}>
-            <Check size={16} />
-            Add
-          </button>
-        </div>
+        <TargetLocalePicker selectedLocales={settings.targetLocales} onChange={updateTargetLocales} showSelectedList={false} />
+        <div className="targetLocaleOrderTitle">{t("Target priority")}</div>
         <LocaleOrderList
           locales={settings.targetLocales}
-          emptyText="Using en_us"
-          moveLocale={moveTargetLocale}
-          removeLocale={removeTargetLocale}
+          emptyText={t("Using en_us")}
+          onChange={updateTargetLocales}
         />
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Editor</h2>
+          <h2>{t("Appearance")}</h2>
         </div>
         <label>
-          Inspector width
+          {t("App language")}
+          <div className="segmentedControl wide">
+            {APP_LOCALES.map((locale) => (
+              <button
+                type="button"
+                key={locale}
+                className={locale === settings.appLocale ? "active" : ""}
+                onClick={() => setSettings((current) => ({ ...current, appLocale: locale }))}
+              >
+                {locale === "zh_tw" ? t("Traditional Chinese") : t("English")}
+              </button>
+            ))}
+          </div>
+        </label>
+        <label className="settingsThemeField">
+          {t("Theme")}
+          <ThemeModeSwitcher value={settings.themeMode} onChange={(themeMode) => setSettings((current) => ({ ...current, themeMode }))} />
+        </label>
+      </section>
+      <section className="panel settingsPanel">
+        <div className="panelHeader">
+          <h2>{t("Editor")}</h2>
+        </div>
+        <label>
+          {t("Inspector width")}
           <div className="rangeControl">
             <input
               type="range"
@@ -316,60 +391,69 @@ export function SettingsPage({
               }))
             }
           />
-          Warn on formatting code mismatches
+          {t("Warn on formatting code mismatches")}
         </label>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Browser storage</h2>
+          <h2>{t("Browser storage")}</h2>
           <div className="buttonRow compact">
             <button type="button" className="danger" onClick={clearLoadedJars} disabled={loadedJarCount === 0 || stateResetDisabled}>
               <Trash2 size={16} />
-              Clear loaded jars
+              {t("Clear loaded jars")}
             </button>
             <button type="button" className="danger" onClick={clearAllState} disabled={stateResetDisabled}>
               <Trash2 size={16} />
-              Delete all state
+              {t("Delete all state")}
             </button>
           </div>
         </div>
         <div className="targetHint">
-          {loadedJarCount.toLocaleString()} loaded jar(s). Clear loaded jars removes stored mod files and scan results; delete all state resets the app.
+          {t("{count} loaded jar(s). Clear loaded jars removes stored mod files and scan results; delete all state resets the app.", {
+            count: loadedJarCount.toLocaleString(),
+          })}
         </div>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Locale fallback</h2>
+          <h2>{t("Locale fallback")}</h2>
         </div>
-        {settings.targetLocales.length === 0 ? <div className="emptyState">Using en_us</div> : null}
+        {settings.targetLocales.length === 0 ? <div className="emptyState">{t("Using en_us")}</div> : null}
+        {settings.targetLocales.length ? (
+          <FallbackOptionsPool
+            activeLocale={resolvedActiveFallbackLocale}
+            activeChain={activeFallbackChain}
+            options={sharedFallbackOptions}
+            dragLocale={fallbackPoolDrag?.locale ?? null}
+            onAdd={addFallbackToActive}
+            onDragMove={previewFallbackPoolDrag}
+            onDragEnd={finishFallbackPoolDrag}
+            onDragCancel={() => setFallbackPoolDrag(null)}
+          />
+        ) : null}
         {settings.targetLocales.map((locale) => (
           <FallbackChainEditor
             key={locale}
             locale={locale}
             chain={settings.fallbackChains[locale] ?? []}
-            availableLocales={fallbackSuggestions}
-            setChain={(chain) =>
-              setSettings((current) => ({
-                ...current,
-                fallbackChains: {
-                  ...current.fallbackChains,
-                  [locale]: normalizeFallbackChain(locale, chain),
-                },
-              }))
-            }
+            active={locale === resolvedActiveFallbackLocale || locale === fallbackPoolDrag?.targetLocale}
+            externalDragLocale={fallbackPoolDrag?.targetLocale === locale ? fallbackPoolDrag.locale : null}
+            externalDropIndex={fallbackPoolDrag?.targetLocale === locale ? fallbackPoolDrag.dropIndex : null}
+            onActivate={() => setActiveFallbackLocale(locale)}
+            setChain={(chain) => updateFallbackChain(locale, chain)}
           />
         ))}
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Convert</h2>
+          <h2>{t("Convert")}</h2>
           <button type="button" onClick={refreshConvertedValues} disabled={!hasRows}>
             <ArrowLeftRight size={16} />
-            Refresh converted
+            {t("Refresh converted")}
           </button>
         </div>
-        <div className="translateTargetGroup" aria-label="Convert sources">
-          <span>Convert from</span>
+        <div className="translateTargetGroup" aria-label={t("Convert sources")}>
+          <span>{t("Convert from")}</span>
           <div className="sourceTargetToggles">
             {CONVERT_SOURCE_ORDER.map((source) => (
               <label className={`sourceTargetToggle ${settings.convertSources[source] ? "active" : ""}`} key={source}>
@@ -392,7 +476,7 @@ export function SettingsPage({
           </div>
         </div>
         <label>
-          LLM source values
+          {t("LLM source values")}
           <select
             value={settings.llmReferenceMode}
             onChange={(event) =>
@@ -404,19 +488,19 @@ export function SettingsPage({
           >
             {LLM_REFERENCE_MODES.map((mode) => (
               <option key={mode} value={mode}>
-                {llmReferenceModeLabel(mode)}
+                {t(llmReferenceModeLabel(mode))}
               </option>
             ))}
           </select>
         </label>
-        <div className="targetHint">Starts from the selected source mode, then falls back to later modes when that source is unavailable.</div>
+        <div className="targetHint">{t("Starts from the selected source mode, then falls back to later modes when that source is unavailable.")}</div>
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Export</h2>
+          <h2>{t("Export")}</h2>
         </div>
-        <div className="translateTargetGroup" aria-label="Export skipped sources">
-          <span>Skip keys from</span>
+        <div className="translateTargetGroup" aria-label={t("Export skipped sources")}>
+          <span>{t("Skip keys from")}</span>
           <div className="sourceTargetToggles">
             {SOURCE_LABEL_ORDER.map((source) => (
               <label className={`sourceTargetToggle ${settings.exportSkipSources[source] ? "active" : ""}`} key={source}>
@@ -438,33 +522,33 @@ export function SettingsPage({
             ))}
           </div>
           <div className="targetHint">
-            Checked sources are omitted from resource pack zip and patched jar exports. Vanilla, Jar, and Fallback are skipped by default.
+            {t("Checked sources are omitted from resource pack zip and patched jar exports. Vanilla, Jar, and Fallback are skipped by default.")}
           </div>
         </div>
       </section>
       <section className="panel settingsPanel glossaryPanel">
         <div className="panelHeader">
-          <h2>Glossary</h2>
-          <span className="panelNote">{filteredGlossaryEntries.length.toLocaleString()} shown</span>
+          <h2>{t("Glossary")}</h2>
+          <span className="panelNote">{t("{count} shown", { count: filteredGlossaryEntries.length.toLocaleString() })}</span>
         </div>
         <div className="glossaryToolbar">
           <label className="searchBox">
             <Search size={16} />
-            <input value={glossaryQuery} onChange={(event) => setGlossaryQuery(event.target.value)} placeholder="Search glossary" />
+            <input value={glossaryQuery} onChange={(event) => setGlossaryQuery(event.target.value)} placeholder={t("Search glossary")} />
           </label>
           <div className="buttonRow compact">
             <button type="button" onClick={addCustomGlossaryEntry}>
               <FileJson size={16} />
-              Add custom
+              {t("Add custom")}
             </button>
             <button type="button" onClick={resetBuiltinGlossaryEntries}>
               <RotateCcw size={16} />
-              Reset curated
+              {t("Reset curated")}
             </button>
-            <FilePicker label="Import" accept=".json" onChange={importGlossaryEntries} icon={<Upload size={16} />} />
+            <FilePicker label={t("Import")} accept=".json" onChange={importGlossaryEntries} icon={<Upload size={16} />} />
             <button type="button" onClick={exportGlossaryEntries}>
               <Download size={16} />
-              Export
+              {t("Export")}
             </button>
           </div>
         </div>
@@ -481,7 +565,7 @@ export function SettingsPage({
                       checked={entry.enabled}
                       onChange={(event) => updateGlossaryEntryField(entry, "enabled", event.target.checked)}
                     />
-                    Enabled
+                    {t("Enabled")}
                   </label>
                   <div className="glossaryIdentity">
                     <strong>{entry.id}</strong>
@@ -494,12 +578,12 @@ export function SettingsPage({
                     {builtin ? (
                       <button type="button" onClick={() => resetGlossaryEntry(entry.id)} disabled={!overridden}>
                         <RotateCcw size={16} />
-                        Reset
+                        {t("Reset")}
                       </button>
                     ) : (
                       <button type="button" className="danger" onClick={() => resetGlossaryEntry(entry.id)}>
                         <Trash2 size={16} />
-                        Delete
+                        {t("Delete")}
                       </button>
                     )}
                   </div>
@@ -516,7 +600,7 @@ export function SettingsPage({
                   ))}
                 </div>
                 <label>
-                  Note
+                  {t("Note")}
                   <input value={entry.note ?? ""} onChange={(event) => updateGlossaryEntryField(entry, "note", event.target.value)} />
                 </label>
               </article>
@@ -526,7 +610,7 @@ export function SettingsPage({
       </section>
       <section className="panel settingsPanel">
         <div className="panelHeader">
-          <h2>Source labels</h2>
+          <h2>{t("Source labels")}</h2>
         </div>
         <div className="colorLegend">
           {SOURCE_LABEL_ORDER.map((source) => {
@@ -545,7 +629,7 @@ export function SettingsPage({
       </section>
       <section className="panel llmPanel settingsPanel">
         <div className="panelHeader">
-          <h2>LLM</h2>
+          <h2>{t("LLM")}</h2>
           <button
             type="button"
             onClick={() =>
@@ -557,7 +641,7 @@ export function SettingsPage({
             }
           >
             <RotateCcw size={16} />
-            Reset prompts
+            {t("Reset prompts")}
           </button>
         </div>
         <label className="checkboxControl">
@@ -566,10 +650,10 @@ export function SettingsPage({
             checked={Boolean(llmSettings.debugMode)}
             onChange={(event) => setLlmSettings((current) => ({ ...current, debugMode: event.target.checked }))}
           />
-          Debug simulated LLM
+          {t("Debug simulated LLM")}
         </label>
         <label>
-          Debug wait per batch (ms)
+          {t("Debug wait per batch (ms)")}
           <input
             type="number"
             min="0"
@@ -581,7 +665,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          Base URL
+          {t("Base URL")}
           <input
             value={llmSettings.baseUrl}
             disabled={llmSettings.debugMode}
@@ -589,7 +673,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          Model
+          {t("Model")}
           <div
             className="modelControl"
             onBlur={(event) => {
@@ -608,10 +692,10 @@ export function SettingsPage({
               aria-expanded={modelMenuOpen}
             >
               {loadingModels ? <Loader2 size={16} className="spin" /> : <ArrowDown size={16} />}
-              Models
+              {t("Models")}
             </button>
             {modelMenuOpen && availableModels.length ? (
-              <div className="modelMenu" role="listbox" aria-label="Available models">
+              <div className="modelMenu" role="listbox" aria-label={t("Available models")}>
                 {availableModels.map((model) => (
                   <button
                     type="button"
@@ -633,7 +717,7 @@ export function SettingsPage({
           </div>
         </label>
         <label>
-          API Key
+          {t("API Key")}
           <input
             type="password"
             value={llmSettings.apiKey}
@@ -642,7 +726,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          Batch size
+          {t("Batch size")}
           <input
             type="number"
             min="1"
@@ -652,7 +736,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          Parallel requests
+          {t("Parallel requests")}
           <input
             type="number"
             min="1"
@@ -667,7 +751,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          System prompt
+          {t("System prompt")}
           <textarea
             className="promptTextarea"
             value={llmSettings.systemPrompt ?? ""}
@@ -676,7 +760,7 @@ export function SettingsPage({
           />
         </label>
         <label>
-          User prompt
+          {t("User prompt")}
           <textarea
             className="promptTextarea large"
             value={llmSettings.userPrompt ?? ""}

@@ -21,6 +21,9 @@ describe("deployment config", () => {
     expect(defaults.settings.targetLocales).toEqual([]);
     expect(defaults.settings.llmReferenceMode).toBe("en_us");
     expect(defaults.settings.warnFormattingCodeMismatch).toBe(false);
+    expect(defaults.settings.appLocale).toBe("en_us");
+    expect(defaults.settings.themeMode).toBe("system");
+    expect(defaults.settings.setupComplete).toBe(false);
   });
 
   it("normalizes partial openai_api, app, and source label config", () => {
@@ -39,6 +42,9 @@ describe("deployment config", () => {
         llmConcurrency: 4,
         llmReferenceMode: "fallback",
         warnFormattingCodeMismatch: true,
+        appLocale: "zh_tw",
+        themeMode: "dark",
+        setupComplete: true,
       },
       sourceLabels: {
         jar: {
@@ -61,6 +67,9 @@ describe("deployment config", () => {
       llmConcurrency: 4,
       llmReferenceMode: "fallback",
       warnFormattingCodeMismatch: true,
+      appLocale: "zh_tw",
+      themeMode: "dark",
+      setupComplete: true,
     });
     expect(normalized.sourceLabels.jar).toMatchObject({
       label: "Mod JAR",
@@ -105,6 +114,9 @@ describe("deployment config", () => {
           zh_tw: ["zh_cn", "zh_cn", "bad_locale", "zh_tw"],
         },
         llmReferenceMode: "bad",
+        appLocale: "fr_fr",
+        themeMode: "sepia",
+        setupComplete: "yes",
       },
       sourceLabels: {
         jar: {
@@ -130,6 +142,9 @@ describe("deployment config", () => {
     expect(normalized.settings.llmBatchSize).toBe(200);
     expect(normalized.settings.llmConcurrency).toBe(1);
     expect(normalized.settings.llmReferenceMode).toBe(defaults.settings.llmReferenceMode);
+    expect(normalized.settings.appLocale).toBe(defaults.settings.appLocale);
+    expect(normalized.settings.themeMode).toBe(defaults.settings.themeMode);
+    expect(normalized.settings.setupComplete).toBe(defaults.settings.setupComplete);
     expect(normalized.settings.targetLocales).toEqual(["zh_tw"]);
     expect(normalized.settings.fallbackChains.zh_tw).toEqual(["zh_cn", "en_us"]);
     expect(normalized.sourceLabels.jar).toMatchObject({
@@ -158,6 +173,9 @@ describe("deployment config", () => {
         ...deploymentDefaults.settings,
         packFormat: 12,
         llmBatchSize: 8,
+        appLocale: "zh_tw",
+        themeMode: "light",
+        setupComplete: true,
       },
       deploymentDefaults.settings,
     );
@@ -168,6 +186,9 @@ describe("deployment config", () => {
 
     expect(savedSettings.packFormat).toBe(12);
     expect(savedSettings.llmBatchSize).toBe(8);
+    expect(savedSettings.appLocale).toBe("zh_tw");
+    expect(savedSettings.themeMode).toBe("light");
+    expect(savedSettings.setupComplete).toBe(true);
     expect(savedLlmSettings.model).toBe("saved-model");
     expect(savedLlmSettings.baseUrl).toBe(OFFICIAL_OPENAI_API_BASE_URL);
     expect(savedLlmSettings.apiKey).toBe("");

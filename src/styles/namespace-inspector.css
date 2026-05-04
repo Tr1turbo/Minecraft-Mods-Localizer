@@ -2,15 +2,44 @@
   margin-bottom: 0;
 }
 
+.rightPane .valueBlock,
+.rightPane .editPanel,
+.rightPane .finalPanel,
+.rightPane .llmCandidatePanel,
+.rightPane .glossaryMatchesPanel {
+  margin-bottom: 10px;
+  padding: 10px;
+}
+
+.rightPane .panelHeader,
+.rightPane .valueBlockHeader {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.rightPane .buttonRow.compact {
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.rightPane pre,
+.rightPane .patchEditorFrame textarea,
+.rightPane .patchDiffLayer {
+  padding: 9px;
+}
+
 .llmCandidatePanel {
   display: grid;
   gap: 8px;
 }
 
 .glossaryMatchesPanel {
-  background: #ffffff;
-  border: 1px solid #d7dfe7;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
@@ -23,9 +52,9 @@
 }
 
 .glossaryMatchRow {
-  background: #f8fafc;
-  border: 1px solid #dfe7ef;
-  border-radius: 7px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 6px;
   padding: 8px;
@@ -39,7 +68,7 @@
 }
 
 .glossaryMatchMeta strong {
-  color: #263649;
+  color: var(--text);
   flex: 1 1 auto;
   font-size: 12px;
   min-width: 120px;
@@ -74,10 +103,10 @@
 }
 
 .glossaryIdChip {
-  background: #eef3f7;
-  border: 1px solid #d7e0e8;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  color: #536171;
+  color: var(--text-muted);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 11px;
@@ -86,54 +115,13 @@
   padding: 4px 7px;
 }
 
-.glossaryIdChip.hasTooltip {
-  cursor: help;
-  outline-offset: 2px;
-  position: relative;
-}
-
-.glossaryIdChip.hasTooltip::after {
-  background: #17202a;
-  border: 1px solid #2d3a47;
-  border-radius: 6px;
-  box-shadow: 0 8px 22px rgb(23 32 42 / 0.22);
-  color: #ffffff;
-  content: attr(data-full-ids);
-  font-size: 12px;
-  font-weight: 600;
-  left: 50%;
-  line-height: 1.35;
-  max-height: 280px;
-  max-width: min(520px, 70vw);
-  opacity: 0;
-  overflow: auto;
-  overflow-wrap: anywhere;
-  padding: 7px 9px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  transform: translate(-50%, -2px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
-  white-space: pre-line;
-  width: max-content;
-  z-index: 40;
-}
-
-.glossaryIdChip.hasTooltip:hover::after,
-.glossaryIdChip.hasTooltip:focus::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .glossaryMatchTerms {
   display: grid;
   gap: 5px;
 }
 
 .glossaryMatchTerms span {
-  color: #536171;
+  color: var(--text-muted);
   display: grid;
   font-size: 12px;
   gap: 2px;
@@ -141,12 +129,12 @@
 }
 
 .glossaryMatchTerms b {
-  color: #263649;
+  color: var(--text);
   font-size: 11px;
 }
 
 .candidateCount {
-  color: #657384;
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
 }
@@ -157,27 +145,62 @@
 }
 
 .llmCandidateCard {
-  background: #f8fafc;
-  border: 1px solid #dfe7ef;
-  border-radius: 7px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 8px;
   padding: 9px;
 }
 
 .llmCandidateCard.active {
-  background: #f7efff;
-  border-color: #cdaee7;
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
 }
 
 .llmCandidateCard pre {
-  background: #ffffff;
+  background: var(--surface);
   max-height: 92px;
+}
+
+.llmCandidateValueFrame {
+  position: relative;
+}
+
+.llmCandidateValueFrame pre {
+  margin: 0;
+}
+
+.llmCandidateValueFrame.singleLine pre {
+  padding-right: 78px;
+}
+
+.llmCandidateValueFrame.multiLine pre {
+  padding-bottom: 44px;
+}
+
+.llmCandidateActions {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  position: absolute;
+  z-index: 1;
+}
+
+.llmCandidateValueFrame.singleLine .llmCandidateActions {
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.llmCandidateValueFrame.multiLine .llmCandidateActions {
+  bottom: 6px;
+  right: 6px;
 }
 
 .pendingLlmText {
   align-items: baseline;
-  color: #657384;
+  color: var(--text-muted);
   display: inline-flex;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   gap: 0.4em;
@@ -192,7 +215,7 @@
 }
 
 .pendingLlmLabel {
-  color: #4a5566;
+  color: var(--text-muted);
   letter-spacing: 0.01em;
 }
 
@@ -225,7 +248,7 @@
 
 .llmCandidateMeta {
   align-items: center;
-  color: #657384;
+  color: var(--text-muted);
   display: flex;
   flex-wrap: wrap;
   font-size: 11px;
@@ -233,7 +256,7 @@
 }
 
 .llmCandidateMeta strong {
-  color: #6c3a95;
+  color: var(--primary);
 }
 
 .valueBlockHeader h3 {
@@ -241,25 +264,79 @@
   margin: 0;
 }
 
-.valueBlockHeader span {
+.valueBlockHeader h3,
+.rightPane .panelHeader h2,
+.referenceSelectLabel {
+  flex: 0 1 auto;
+}
+
+.valueBlockHeader .sourceMeta {
   align-items: center;
-  color: #657384;
+  color: var(--text-muted);
   display: inline-flex;
   font-size: 11px;
   gap: 6px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.sourceMetaText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .referenceSelectLabel {
   align-items: center;
-  color: #536171;
+  color: var(--text-muted);
   display: inline-flex;
   font-size: 12px;
   font-weight: 700;
   gap: 8px;
+  min-width: 0;
+}
+
+.inspectorActionTooltip {
+  flex: 0 0 auto;
+}
+
+.inspectorActionButton {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--text-muted);
+  height: 32px;
+  padding: 0;
+  width: 32px;
+}
+
+.inspectorActionButton:hover {
+  background: var(--surface-strong);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.inspectorActionButton.danger:hover {
+  color: var(--danger);
+}
+
+.inspectorActionButton:focus-visible {
+  background: var(--surface-strong);
+  border-color: transparent;
+  box-shadow: var(--focus);
+}
+
+.inspectorActionButton:disabled {
+  background: transparent;
+  color: var(--text-soft);
+  opacity: 0.48;
 }
 
 .referenceSelectLabel select {
   height: 30px;
+  max-width: 190px;
   min-height: 30px;
   padding: 3px 28px 3px 8px;
   width: auto;
@@ -267,10 +344,10 @@
 
 .referenceFallbackNotice {
   align-items: center;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-radius: 6px;
-  color: #8a4b12;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-control);
+  color: var(--warning-text);
   display: flex;
   font-size: 12px;
   gap: 7px;
@@ -301,16 +378,16 @@
 
 .patchEditorFrame textarea {
   background: transparent;
-  caret-color: #1e242c;
+  caret-color: var(--text);
   color: transparent;
   position: relative;
   resize: vertical;
 }
 
 .patchDiffLayer {
-  background: #ffffff;
-  border: 1px solid #cbd5df;
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   inset: 0;
   margin: 0;
   pointer-events: none;
@@ -318,17 +395,17 @@
 }
 
 .patchDiffSegment.same {
-  color: #1e242c;
+  color: var(--text);
 }
 
 .patchEditorFrame.noManualPatch .patchDiffSegment.same,
 .patchEditorFrame.noManualPatch .patchDiffSegment.added {
-  color: #8a98a7;
+  color: var(--text-soft);
   font-weight: 400;
 }
 
 .patchDiffSegment.added {
-  color: #14835f;
+  color: var(--primary);
   font-weight: 700;
 }
 
@@ -337,7 +414,7 @@
 }
 
 .warningText {
-  color: #9a5c00;
+  color: var(--warning-text);
   font-size: 12px;
   margin-top: 8px;
 }

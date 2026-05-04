@@ -1,30 +1,45 @@
 .pageNav,
 .namespaceNav {
   display: grid;
-  gap: 6px;
+  gap: 7px;
 }
 
 .pageNav {
-  border-bottom: 1px solid #d7dfe7;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  margin-bottom: 18px;
+  padding: 0;
 }
 
 .pageNav button,
 .namespaceNav button {
   background: transparent;
   border-color: transparent;
+  border-radius: var(--radius-panel);
+  box-shadow: none;
+  color: var(--text-muted);
+  font-weight: 700;
   justify-content: flex-start;
   min-width: 0;
   width: 100%;
 }
 
+.pageNav button {
+  min-height: 42px;
+  padding-inline: 12px;
+}
+
+.pageNav button:hover,
+.namespaceNav button:hover {
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text);
+}
+
 .pageNav button.active,
 .namespaceNav button.active {
-  background: #e8f4f2;
-  border-color: #b9d7d2;
-  color: #1c6e65;
-  font-weight: 700;
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  color: var(--primary);
+  font-weight: 800;
 }
 
 .namespaceNav button {
@@ -40,29 +55,29 @@
 }
 
 .namespaceNav button strong {
-  color: #667586;
+  color: var(--text-soft);
   font-size: 11px;
 }
 
 .navSectionTitle {
-  color: #667586;
+  color: var(--text-soft);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   margin: 2px 0 4px;
   text-transform: uppercase;
 }
 
 .namespaceHeader {
   align-items: start;
-  background: #ffffff;
-  border-bottom: 1px solid #d7dfe7;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   display: grid;
   flex: 0 0 auto;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) minmax(0, auto);
-  min-height: 60px;
-  padding: 10px 12px;
+  min-height: 64px;
+  padding: 12px 14px;
 }
 
 .namespaceHeaderActions {
@@ -76,13 +91,15 @@
 }
 
 .namespaceHeader h2 {
-  font-size: 17px;
+  color: var(--text);
+  font-size: 18px;
   letter-spacing: 0;
-  margin: 0 0 3px;
+  margin: 0 0 4px;
 }
 
 .namespaceHeader p {
-  color: #667586;
+  color: var(--text-muted);
   font-size: 12px;
+  font-weight: 700;
   margin: 0;
 }

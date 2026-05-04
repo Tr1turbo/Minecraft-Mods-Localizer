@@ -1,6 +1,7 @@
 import { Pause, Play, Square } from "lucide-react";
 import { useEffect, useState } from "react";
 import { estimateRemainingTime } from "../app/helpers";
+import { useI18n } from "../app/i18n";
 import type { TranslationProgress } from "../app/types";
 
 export function TranslationProgressPanel({
@@ -14,6 +15,7 @@ export function TranslationProgressPanel({
   resumeTranslationJob: () => void;
   stopTranslationJob: () => void;
 }) {
+  const { t } = useI18n();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -23,10 +25,10 @@ export function TranslationProgressPanel({
   const percent = progress.total > 0 ? Math.min(100, Math.round((progress.completed / progress.total) * 100)) : 0;
   const remaining = estimateRemainingTime(progress, now);
   const statusLabel =
-    progress.status === "paused" ? "Paused" : progress.status === "stopping" ? "Stopping" : `${progress.completed.toLocaleString()} / ${progress.total.toLocaleString()}`;
+    progress.status === "paused" ? t("Paused") : progress.status === "stopping" ? t("Stopping") : `${progress.completed.toLocaleString()} / ${progress.total.toLocaleString()}`;
 
   return (
-    <section className="translationProgressPanel" aria-label="LLM translation progress">
+    <section className="translationProgressPanel" aria-label={t("LLM translation progress")}>
       <div className="progressHeader">
         <div>
           <strong>{progress.label}</strong>
@@ -40,23 +42,23 @@ export function TranslationProgressPanel({
       <div className="progressFooter">
         <div className="progressStats">
           <span>ETA {remaining}</span>
-          {progress.warningCount ? <span>{progress.warningCount.toLocaleString()} warning(s)</span> : null}
+          {progress.warningCount ? <span>{t("{count} warning(s)", { count: progress.warningCount.toLocaleString() })}</span> : null}
         </div>
         <div className="progressControls">
           {progress.status === "paused" ? (
             <button type="button" onClick={resumeTranslationJob}>
               <Play size={16} />
-              Resume
+              {t("Resume")}
             </button>
           ) : (
             <button type="button" onClick={pauseTranslationJob} disabled={progress.status === "stopping"}>
               <Pause size={16} />
-              Pause
+              {t("Pause")}
             </button>
           )}
           <button type="button" className="danger" onClick={stopTranslationJob} disabled={progress.status === "stopping"}>
             <Square size={16} />
-            Stop
+            {t("Stop")}
           </button>
         </div>
       </div>

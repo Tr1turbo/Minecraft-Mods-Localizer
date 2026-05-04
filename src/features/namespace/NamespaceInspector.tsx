@@ -1,6 +1,8 @@
 import { RotateCcw, Save, Wand2 } from "lucide-react";
 
 import { SourceBadge } from "../../components/SourceBadge";
+import { Tooltip } from "../../components/Tooltip";
+import { useI18n } from "../../app/i18n";
 import { LlmCandidatesPanel } from "../llm/LlmCandidatesPanel";
 import type { DiffSegment, LlmLiveOutput } from "../../app/types";
 import type { LocaleCode, PatchValue, GlossaryEntry, ReferenceValue, ResolvedEntry } from "../../lib/types";
@@ -57,8 +59,9 @@ export function NamespaceInspector({
   useLlmCandidate,
   deleteLlmCandidate,
 }: NamespaceInspectorProps) {
+  const { t } = useI18n();
   if (!selectedEntry) {
-    return <div className="emptyState detailEmpty">No key selected</div>;
+    return <div className="emptyState detailEmpty">{t("No key selected")}</div>;
   }
 
   return (
@@ -71,7 +74,7 @@ export function NamespaceInspector({
           onReferenceLocaleChange={updateReferenceLocale}
           hasEnUsValue={selectedReferenceValues.some((reference) => reference.locale === "en_us")}
         />
-        <ValueBlock title="Base value" source={selectedEntry.base.source} value={selectedEntry.base.value} label={selectedEntry.base.sourceLabel} />
+        <ValueBlock title={t("Base value")} source={selectedEntry.base.source} value={selectedEntry.base.value} label={selectedEntry.base.sourceLabel} />
       </section>
 
       {selectedGlossaryMatches.length ? (
@@ -92,20 +95,35 @@ export function NamespaceInspector({
 
       <section className="editPanel">
         <div className="panelHeader">
-          <h2>Patch</h2>
+          <h2>{t("Patch")}</h2>
           <div className="buttonRow compact">
-            <button type="button" onClick={saveManualPatch}>
-              <Save size={16} />
-              Save
-            </button>
-            <button type="button" onClick={revertSelectedManualPatch} disabled={!selectedEntry.patch}>
-              <RotateCcw size={16} />
-              Key
-            </button>
-            <button type="button" onClick={translateSelected} disabled={!selectedEntry || translating}>
-              <Wand2 size={16} />
-              LLM
-            </button>
+            <Tooltip content={t("Save")} className="inspectorActionTooltip">
+              <button type="button" className="inspectorActionButton" onClick={saveManualPatch} aria-label={t("Save")}>
+                <Save size={17} />
+              </button>
+            </Tooltip>
+            <Tooltip content={t("Revert key")} className="inspectorActionTooltip">
+              <button
+                type="button"
+                className="inspectorActionButton"
+                onClick={revertSelectedManualPatch}
+                disabled={!selectedEntry.patch}
+                aria-label={t("Revert key")}
+              >
+                <RotateCcw size={17} />
+              </button>
+            </Tooltip>
+            <Tooltip content="LLM" className="inspectorActionTooltip">
+              <button
+                type="button"
+                className="inspectorActionButton"
+                onClick={translateSelected}
+                disabled={!selectedEntry || translating}
+                aria-label="LLM"
+              >
+                <Wand2 size={17} />
+              </button>
+            </Tooltip>
             {selectedEntry.patch?.meta?.generatedBy === "llm" ? <SourceBadge source="llm" /> : null}
             {selectedEntry.patch?.meta?.generatedBy === "converted" ? <SourceBadge source="converted" /> : null}
           </div>
@@ -121,7 +139,7 @@ export function NamespaceInspector({
 
       <section className="finalPanel">
         <div className="panelHeader">
-          <h2>Final Output</h2>
+          <h2>{t("Final Output")}</h2>
           <SourceBadge source={selectedEntry.final.source} />
         </div>
         <pre className="minecraftFormattedOutput" aria-label={selectedEntry.final.value || "None"}>

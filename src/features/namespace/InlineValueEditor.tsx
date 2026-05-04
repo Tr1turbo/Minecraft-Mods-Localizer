@@ -24,7 +24,6 @@ export function InlineValueEditor({
       className={`inlineValueInput ${entry.final.source}`}
       style={{ borderLeftColor: sourceLabels[entry.final.source].stripe }}
       value={value}
-      title={value}
       onFocus={selectRow}
       onClick={(event) => event.stopPropagation()}
       onChange={(event) => setDraft(event.target.value)}

@@ -139,6 +139,9 @@ export function useBrowserDraftPersistence({
               fallbackChains: { ...restoredProject.fallbackChains },
             };
           }
+          if (!nextSettings.setupComplete && hasRestoredSessionWork(draft.data, restoredProject, restoredModFiles)) {
+            nextSettings = { ...nextSettings, setupComplete: true };
+          }
           const restoredReferenceLocale = typeof draft.data.referenceLocale === "string" ? draft.data.referenceLocale : "en_us";
           const restoredFallbackLocale =
             typeof draft.data.referenceFallbackLocale === "string" && nextSettings.targetLocales.includes(draft.data.referenceFallbackLocale)
@@ -269,4 +272,18 @@ export function useBrowserDraftPersistence({
     resumeAutosave,
     restoredManualDraftRef,
   };
+}
+
+function hasRestoredSessionWork(draft: BrowserDraftState, project: LangpackProjectPatch, restoredModFiles: readonly File[]): boolean {
+  return (
+    restoredModFiles.length > 0 ||
+    (draft.modScan?.fingerprints?.length ?? 0) > 0 ||
+    (Array.isArray(draft.sourcePacks) && draft.sourcePacks.length > 0) ||
+    project.locales.length > 0 ||
+    Object.keys(project.patches ?? {}).length > 0 ||
+    Object.keys(project.llmCandidates ?? {}).length > 0 ||
+    Object.keys(project.glossary ?? {}).length > 0 ||
+    Object.keys(isEntryDraftRecord(draft.inlineDrafts) ? draft.inlineDrafts : {}).length > 0 ||
+    Boolean(draft.selectedKey || draft.query || draft.manualDraft)
+  );
 }

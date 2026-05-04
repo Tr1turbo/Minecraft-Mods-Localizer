@@ -3,9 +3,10 @@
 .finalPanel,
 .llmCandidatePanel,
 .valueBlock {
-  background: #ffffff;
-  border: 1px solid #d7dfe7;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 80%, transparent) inset;
   margin-bottom: 12px;
   padding: 12px;
 }
@@ -22,6 +23,7 @@
 .panelHeader h2,
 .editPanel h2,
 .finalPanel h2 {
+  color: var(--text);
   font-size: 13px;
   letter-spacing: 0;
   margin: 0;
@@ -29,7 +31,7 @@
 
 .metricsPanel {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -38,20 +40,23 @@
 }
 
 .metric {
-  background: #f1f5f8;
-  border-radius: 6px;
-  padding: 9px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: 10px;
 }
 
 .metric span {
-  color: #657384;
+  color: var(--text-muted);
   display: block;
   font-size: 11px;
-  margin-bottom: 4px;
+  font-weight: 800;
+  margin-bottom: 5px;
 }
 
 .metric strong {
-  font-size: 17px;
+  color: var(--text);
+  font-size: 18px;
 }
 
 .sourcePackList {
@@ -61,17 +66,19 @@
 
 .sourcePackRow {
   align-items: center;
-  background: #f7f9fb;
-  border: 1px solid #dde5ed;
-  border-radius: 6px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 38px;
-  padding: 5px 6px 5px 9px;
+  min-height: 42px;
+  padding: 6px 7px 6px 10px;
 }
 
-.sourcePackRow span {
+.sourcePackRow span,
+.sourcePackNameTooltip {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -94,11 +101,120 @@
 }
 
 .iconButton {
-  height: 28px;
+  height: 30px;
   padding: 0;
-  width: 28px;
+  width: 30px;
 }
 
 .iconButton.danger {
-  color: #a33b3b;
+  color: var(--danger);
+}
+
+.sourceBadge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  justify-content: center;
+  line-height: 1;
+  padding: 5px 8px;
+  width: fit-content;
+}
+
+.sourceBadge.jar {
+  background: #e6edf7;
+  color: #315b8c;
+}
+
+.sourceBadge.vanilla {
+  background: #f0f4dc;
+  color: #566422;
+}
+
+.sourceBadge.resourcePack {
+  background: #ecf7e7;
+  color: #436f2d;
+}
+
+.sourceBadge.llm {
+  background: #f3eafd;
+  color: #6c3a95;
+}
+
+.sourceBadge.manual {
+  background: #fff0d7;
+  color: #8a5a13;
+}
+
+.sourceBadge.converted {
+  background: #e0f4ef;
+  color: #1d6c5b;
+}
+
+.sourceBadge.fallback {
+  background: #f2eeee;
+  color: #7b4a4a;
+}
+
+.sourceBadge.missing {
+  background: #eceff3;
+  color: #5d6875;
+}
+
+[data-theme="dark"] .sourceBadge.jar {
+  background: #203247;
+  color: #a9c8f0;
+}
+
+[data-theme="dark"] .sourceBadge.vanilla {
+  background: #30371f;
+  color: #d0df88;
+}
+
+[data-theme="dark"] .sourceBadge.resourcePack {
+  background: #203a22;
+  color: #a9daa2;
+}
+
+[data-theme="dark"] .sourceBadge.llm {
+  background: #33243f;
+  color: #d2afe8;
+}
+
+[data-theme="dark"] .sourceBadge.manual {
+  background: #3f301d;
+  color: #f1c77f;
+}
+
+[data-theme="dark"] .sourceBadge.converted {
+  background: #1d3b36;
+  color: #91d8cb;
+}
+
+[data-theme="dark"] .sourceBadge.fallback {
+  background: #3a2929;
+  color: #dea5a5;
+}
+
+[data-theme="dark"] .sourceBadge.missing {
+  background: #303842;
+  color: #bac6d2;
+}
+
+.valueStack {
+  display: grid;
+  gap: 10px;
+}
+
+.workflowList {
+  display: grid;
+  gap: 8px;
+}
+
+.workflowList span {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  color: var(--text-muted);
+  padding: 9px 10px;
 }

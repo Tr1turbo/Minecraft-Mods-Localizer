@@ -26,7 +26,7 @@
 
   .rightPane {
     border-left: 0;
-    border-top: 1px solid #d7dfe7;
+    border-top: 1px solid var(--border);
     max-height: 380px;
   }
 
@@ -51,6 +51,14 @@
   .topBar,
   .workspace {
     display: block;
+  }
+
+  .topBar {
+    align-items: flex-start;
+  }
+
+  .statusLine {
+    max-width: 100%;
   }
 
   .topActions {
@@ -82,6 +90,33 @@
 
   .pagePane {
     padding: 12px;
+  }
+
+  .setupShell {
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .setupBrand {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .setupCardTop {
+    grid-template-columns: 1fr;
+  }
+
+  .setupCardTop .themeSwitcher {
+    justify-self: start;
+  }
+
+  .setupCard {
+    padding: 16px;
+  }
+
+  .segmentedControl.wide {
+    grid-auto-flow: row;
+    grid-auto-rows: minmax(32px, auto);
   }
 
   .fallbackEditor {

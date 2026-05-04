@@ -3,7 +3,9 @@ import type { Dispatch, SetStateAction } from "react";
 
 import { LlmWarningsPanel } from "../../components/LlmWarningsPanel";
 import { TranslationProgressPanel } from "../../components/TranslationProgressPanel";
+import { Tooltip } from "../../components/Tooltip";
 import { removeDraft, rowHasLocaleValue, rowId } from "../../app/helpers";
+import { useI18n } from "../../app/i18n";
 import type { TableItem, TranslationProgress } from "../../app/types";
 import type { AppSettings } from "../../lib/deploymentConfig";
 import { effectiveTargetLocales } from "../../lib/locales";
@@ -56,12 +58,13 @@ export function NamespaceTable({
   llmWarnings,
   clearLlmWarnings,
 }: NamespaceTableProps) {
+  const { t } = useI18n();
   const targetLocales = effectiveTargetLocales(settings.targetLocales);
   return (
     <>
       {llmWarnings.length ? <LlmWarningsPanel warnings={llmWarnings} clearWarnings={clearLlmWarnings} /> : null}
       <div className="tableToolbar">
-        <div className="localeTabs" role="tablist" aria-label="Locales">
+        <div className="localeTabs" role="tablist" aria-label={t("Locales")}>
           {targetLocales.map((locale) => (
             <button
               type="button"
@@ -75,7 +78,7 @@ export function NamespaceTable({
         </div>
         <label className="searchBox">
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search keys or values" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search keys or values")} />
         </label>
       </div>
 
@@ -89,13 +92,13 @@ export function NamespaceTable({
       ) : null}
       <div className="entryTable" role="table">
         <div className="entryTableHead" role="row">
-          <span>Key</span>
-          <span>Source</span>
-          <span>Value</span>
+          <span>{t("Key")}</span>
+          <span>{t("Source")}</span>
+          <span>{t("Value")}</span>
         </div>
         <div className="entryTableBody">
           {filteredRows.length === 0 ? (
-            <div className="emptyState tableEmpty">No keys loaded</div>
+            <div className="emptyState tableEmpty">{t("No keys loaded")}</div>
           ) : (
             tableItems.map((item) => {
               if (item.kind === "divider") {
@@ -118,14 +121,18 @@ export function NamespaceTable({
                   role="row"
                   onClick={() => setSelectedKey(rowId(row))}
                 >
-                  <span className="keyCell" data-full-key={row.key}>
-                    <button type="button" className="keyButton" title={row.key} onClick={() => setSelectedKey(rowId(row))}>
-                      {item.displayKey}
-                    </button>
+                  <span className="keyCell">
+                    <Tooltip content={row.key} className="keyTooltip">
+                      <button type="button" className="keyButton" aria-label={row.key} onClick={() => setSelectedKey(rowId(row))}>
+                        {item.displayKey}
+                      </button>
+                    </Tooltip>
                     {!hasEnUsValue ? (
-                      <span className="keyWarningIcon" title="No en_us value" role="img" aria-label="No en_us value">
-                        <TriangleAlert size={14} />
-                      </span>
+                      <Tooltip content={t("No en_us value")}>
+                        <span className="keyWarningIcon" role="img" aria-label={t("No en_us value")} tabIndex={0}>
+                          <TriangleAlert size={14} />
+                        </span>
+                      </Tooltip>
                     ) : null}
                   </span>
                   <SourceBadge source={entry.final.source} />

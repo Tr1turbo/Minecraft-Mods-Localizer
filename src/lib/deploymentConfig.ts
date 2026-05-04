@@ -23,6 +23,11 @@ export const SOURCE_TRANSLATE_TARGET_ORDER: SourceKind[] = ["vanilla", "jar", "r
 export const CONVERT_SOURCE_ORDER: ConvertSourceKind[] = ["manual", "llm", "resourcePack", "jar", "vanilla"];
 export const DEFAULT_FALLBACK_LOCALE = "en_us";
 export const LLM_REFERENCE_MODES: LlmReferenceMode[] = ["en_us", "fallback", "all"];
+export const APP_LOCALES = ["en_us", "zh_tw"] as const;
+export const THEME_MODES = ["system", "light", "dark"] as const;
+
+export type AppLocale = (typeof APP_LOCALES)[number];
+export type ThemeMode = (typeof THEME_MODES)[number];
 
 export interface SourceLabelStyle {
   label: string;
@@ -34,6 +39,9 @@ export interface SourceLabelStyle {
 export type SourceLabelSettings = Record<SourceKind, SourceLabelStyle>;
 
 export interface AppSettings {
+  appLocale: AppLocale;
+  themeMode: ThemeMode;
+  setupComplete: boolean;
   projectMode: "resourcePack";
   sourcePackMode: "prune" | "keep";
   inspectorWidth: number;
@@ -73,6 +81,9 @@ const DEFAULT_SOURCE_LABELS: SourceLabelSettings = {
 
 export function createDefaultAppSettings(): AppSettings {
   return {
+    appLocale: "en_us",
+    themeMode: "system",
+    setupComplete: false,
     projectMode: "resourcePack",
     sourcePackMode: "prune",
     inspectorWidth: 430,
@@ -209,6 +220,15 @@ function normalizeAppSettings(raw: unknown, base: AppSettings): AppSettings {
     return next;
   }
 
+  if (isAppLocale(raw.appLocale)) {
+    next.appLocale = raw.appLocale;
+  }
+  if (isThemeMode(raw.themeMode)) {
+    next.themeMode = raw.themeMode;
+  }
+  if (typeof raw.setupComplete === "boolean") {
+    next.setupComplete = raw.setupComplete;
+  }
   if (raw.projectMode === "resourcePack") {
     next.projectMode = raw.projectMode;
   }
@@ -370,6 +390,14 @@ function mergeBooleanRecord<T extends string>(base: Record<T, boolean>, raw: unk
 
 function isLlmReferenceMode(value: unknown): value is LlmReferenceMode {
   return typeof value === "string" && (LLM_REFERENCE_MODES as readonly string[]).includes(value);
+}
+
+function isAppLocale(value: unknown): value is AppLocale {
+  return typeof value === "string" && (APP_LOCALES as readonly string[]).includes(value);
+}
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return typeof value === "string" && (THEME_MODES as readonly string[]).includes(value);
 }
 
 function applyString(value: unknown, setValue: (value: string) => void) {

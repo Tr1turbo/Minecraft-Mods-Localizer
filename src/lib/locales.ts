@@ -54,3 +54,59 @@ export function effectiveTargetLocales(values: readonly unknown[]): string[] {
 export function isChineseLocale(locale: string): locale is (typeof CHINESE_LOCALES)[number] {
   return (CHINESE_LOCALES as readonly string[]).includes(locale);
 }
+
+export function preferredMinecraftLocale(languageTags: readonly string[] = browserLanguageTags()): string {
+  for (const tag of languageTags) {
+    const locale = localeCodeFromLanguageTag(tag);
+    if (locale && (BUNDLED_LOCALE_CODES as readonly string[]).includes(locale)) {
+      return locale;
+    }
+  }
+  return "zh_tw";
+}
+
+export function preferredAppLocale(languageTags: readonly string[] = browserLanguageTags()): "en_us" | "zh_tw" {
+  return languageTags.some((tag) => tag.toLowerCase().startsWith("zh")) ? "zh_tw" : "en_us";
+}
+
+function browserLanguageTags(): string[] {
+  if (typeof navigator === "undefined") {
+    return [];
+  }
+  const languages = Array.isArray(navigator.languages) ? navigator.languages : [];
+  return [...languages, navigator.language].filter(Boolean);
+}
+
+function localeCodeFromLanguageTag(tag: string): string {
+  const normalized = tag.trim().toLowerCase().replace(/-/g, "_");
+  if (!normalized) {
+    return "";
+  }
+  if (normalized === "zh" || normalized === "zh_hant" || normalized.startsWith("zh_tw") || normalized.startsWith("zh_hk")) {
+    return "zh_tw";
+  }
+  if (normalized === "zh_hans" || normalized.startsWith("zh_cn") || normalized.startsWith("zh_sg")) {
+    return "zh_cn";
+  }
+  const exact = normalizeLocaleCode(normalized);
+  if ((BUNDLED_LOCALE_CODES as readonly string[]).includes(exact)) {
+    return exact;
+  }
+  const language = exact.split("_")[0];
+  const regionalFallbacks: Record<string, string> = {
+    de: "de_de",
+    en: "en_us",
+    es: "es_es",
+    fr: "fr_fr",
+    it: "it_it",
+    ja: "ja_jp",
+    ko: "ko_kr",
+    nl: "nl_nl",
+    pt: "pt_br",
+    ru: "ru_ru",
+    th: "th_th",
+    uk: "uk_ua",
+    vi: "vi_vn",
+  };
+  return regionalFallbacks[language] ?? "";
+}

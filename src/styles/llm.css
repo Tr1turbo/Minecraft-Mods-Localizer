@@ -1,7 +1,7 @@
 .translationProgressPanel {
-  background: #ffffff;
-  border: 1px solid #d4dde6;
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -21,25 +21,25 @@
 }
 
 .progressHeader strong {
-  color: #263649;
+  color: var(--text);
 }
 
 .progressHeader span,
 .progressStats {
-  color: #657384;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
 .progressBar {
-  background: #e8eef4;
+  background: var(--surface-strong);
   border-radius: 999px;
   height: 10px;
   overflow: hidden;
 }
 
 .progressBarFill {
-  background: #1c6e65;
+  background: var(--primary);
   height: 100%;
   transition: width 180ms ease;
 }
@@ -53,9 +53,9 @@
 }
 
 .llmWarningsPanel {
-  background: #fffaf0;
-  border: 1px solid #e6d4aa;
-  border-radius: 6px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-panel);
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -66,11 +66,11 @@
 }
 
 .llmWarningsPanel h2 {
-  color: #6d4e17;
+  color: var(--warning-text);
 }
 
 .llmWarningList {
-  color: #6b5b3a;
+  color: var(--warning-text);
   display: grid;
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 11px;

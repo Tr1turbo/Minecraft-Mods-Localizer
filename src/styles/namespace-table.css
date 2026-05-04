@@ -1,18 +1,19 @@
 .tableToolbar {
   align-items: center;
-  background: #ffffff;
-  border-bottom: 1px solid #d7dfe7;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   display: grid;
   flex: 0 0 auto;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: auto minmax(220px, 1fr);
-  min-height: 58px;
-  padding: 10px 12px;
+  min-height: 62px;
+  padding: 12px 14px;
 }
 
 .localeTabs {
-  background: #edf2f6;
-  border-radius: 7px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   display: inline-flex;
   gap: 3px;
   padding: 3px;
@@ -21,26 +22,49 @@
 .localeTabs button {
   background: transparent;
   border-color: transparent;
+  box-shadow: none;
   height: 30px;
   min-width: 66px;
 }
 
 .localeTabs button.active {
-  background: #ffffff;
-  border-color: #c7d2dd;
-  color: #1c6e65;
-  font-weight: 700;
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 4px 12px rgb(27 42 58 / 0.08);
+  color: var(--primary);
+  font-weight: 800;
 }
 
 .searchBox {
   align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
   display: grid;
-  gap: 7px;
+  gap: 8px;
   grid-template-columns: auto 1fr;
+  padding: 0 12px;
+}
+
+.searchBox svg {
+  color: var(--text-soft);
 }
 
 .searchBox input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   min-width: 0;
+  padding-left: 0;
+}
+
+.searchBox input:focus {
+  box-shadow: none;
+}
+
+.searchBox:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--focus);
 }
 
 .entryTable {
@@ -54,34 +78,33 @@
 .entryRow,
 .prefixDivider {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   grid-template-columns: minmax(130px, 1fr) max-content minmax(120px, 1.2fr);
 }
 
 .entryTableHead {
-  background: #f2f5f8;
-  border-bottom: 1px solid #d7dfe7;
-  color: #5b6978;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
   font-size: 12px;
-  font-weight: 700;
-  padding: 9px 10px;
+  font-weight: 800;
+  padding: 9px 12px;
 }
 
 .entryTableBody {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding: 6px;
 }
 
 .prefixDivider {
   align-items: center;
-  background: #f7fafc;
-  border-bottom: 1px solid #dbe3eb;
-  color: #596878;
+  color: var(--text-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   min-height: 30px;
-  padding: 0 10px;
+  padding: 0 6px;
 }
 
 .prefixDivider span {
@@ -93,23 +116,27 @@
 
 .entryRow {
   align-items: center;
-  background: #ffffff;
-  border: 0;
-  border-bottom: 1px solid #e3e9ef;
-  border-radius: 0;
-  height: 50px;
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-panel);
+  box-shadow: none;
+  height: 52px;
   justify-content: normal;
-  padding: 0 10px;
+  margin-bottom: 4px;
+  padding: 0 8px;
   text-align: left;
   width: 100%;
 }
 
 .entryRow:hover {
-  background: #f8fbfd;
+  background: var(--surface-soft);
+  border-color: var(--border);
+  box-shadow: 0 8px 20px rgb(27 42 58 / 0.06);
 }
 
 .entryRow.selected {
-  background: #e8f4f2;
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
 }
 
 .entryRow > span {
@@ -119,47 +146,21 @@
 }
 
 .keyCell {
+  align-items: center;
   display: flex;
   min-width: 0;
   overflow: visible;
-  position: relative;
 }
 
-.keyCell::after {
-  background: #17202a;
-  border: 1px solid #2d3a47;
-  border-radius: 6px;
-  box-shadow: 0 8px 22px rgb(23 32 42 / 0.22);
-  color: #ffffff;
-  content: attr(data-full-key);
-  font-size: 12px;
-  left: 0;
-  line-height: 1.35;
-  max-width: min(560px, 70vw);
-  opacity: 0;
-  overflow-wrap: anywhere;
-  padding: 7px 9px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 5px);
-  transform: translateY(-2px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
-  white-space: normal;
-  width: max-content;
-  z-index: 20;
-}
-
-.keyCell:hover::after,
-.keyCell:focus-within::after {
-  opacity: 1;
-  transform: translateY(0);
+.keyTooltip {
+  display: block;
+  min-width: 0;
 }
 
 .keyButton {
   background: transparent;
   border: 0;
+  box-shadow: none;
   height: 34px;
   justify-content: flex-start;
   min-width: 0;
@@ -172,13 +173,15 @@
 }
 
 .keyButton:hover {
+  background: transparent;
   border: 0;
+  box-shadow: none;
 }
 
 .keyWarningIcon,
 .referenceWarningIcon {
   align-items: center;
-  color: #a26213;
+  color: var(--warning-text);
   display: inline-flex;
   flex: 0 0 auto;
   justify-content: center;
@@ -202,107 +205,7 @@
   min-width: 0;
 }
 
-.inlineValueInput.jar {
-  border-left-color: #6c8fba;
-}
-
-.inlineValueInput.vanilla {
-  border-left-color: #9aac45;
-}
-
-.inlineValueInput.resourcePack {
-  border-left-color: #75a857;
-}
-
-.inlineValueInput.llm {
-  border-left-color: #9a69bf;
-}
-
-.inlineValueInput.manual {
-  border-left-color: #c28a2c;
-}
-
-.inlineValueInput.converted {
-  border-left-color: #2f9a83;
-}
-
-.inlineValueInput.fallback {
-  border-left-color: #aa7474;
-}
-
-.inlineValueInput.missing {
-  border-left-color: #8d98a5;
-}
-
 .inlineValueInput:focus {
-  border-color: #4e8e87;
-  outline: 2px solid #bddbd7;
-}
-
-.sourceBadge {
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 700;
-  justify-content: center;
-  line-height: 1;
-  padding: 4px 7px;
-  width: fit-content;
-}
-
-.sourceBadge.jar {
-  background: #e6edf7;
-  color: #315b8c;
-}
-
-.sourceBadge.vanilla {
-  background: #f0f4dc;
-  color: #566422;
-}
-
-.sourceBadge.resourcePack {
-  background: #ecf7e7;
-  color: #436f2d;
-}
-
-.sourceBadge.llm {
-  background: #f3eafd;
-  color: #6c3a95;
-}
-
-.sourceBadge.manual {
-  background: #fff0d7;
-  color: #8a5a13;
-}
-
-.sourceBadge.converted {
-  background: #e0f4ef;
-  color: #1d6c5b;
-}
-
-.sourceBadge.fallback {
-  background: #f2eeee;
-  color: #7b4a4a;
-}
-
-.sourceBadge.missing {
-  background: #eceff3;
-  color: #5d6875;
-}
-
-.valueStack {
-  display: grid;
-  gap: 10px;
-}
-
-.workflowList {
-  display: grid;
-  gap: 8px;
-}
-
-.workflowList span {
-  background: #f3f7fa;
-  border: 1px solid #e0e7ee;
-  border-radius: 6px;
-  padding: 9px 10px;
+  border-color: var(--primary);
+  box-shadow: var(--focus);
 }

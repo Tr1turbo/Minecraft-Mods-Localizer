@@ -3,6 +3,7 @@ import type { Dispatch, PointerEvent as ReactPointerEvent, SetStateAction } from
 
 import { NamespaceInspector } from "./NamespaceInspector";
 import { NamespaceTable } from "./NamespaceTable";
+import { useI18n } from "../../app/i18n";
 import { clamp, type AppSettings } from "../../lib/deploymentConfig";
 import type {
   CatalogRow,
@@ -126,26 +127,27 @@ export function NamespaceWorkspace({
   useLlmCandidate,
   deleteLlmCandidate,
 }: NamespaceWorkspaceProps) {
+  const { t } = useI18n();
   return (
     <>
       <section className="centerPane">
         <div className="namespaceHeader">
           <div>
             <h2>{activeNamespace}</h2>
-            <p>{filteredRows.length.toLocaleString()} visible keys</p>
+            <p>{t("{count} visible keys", { count: filteredRows.length.toLocaleString() })}</p>
           </div>
           <div className="namespaceHeaderActions">
             <button type="button" onClick={translateNamespace} disabled={!activeNamespace || translating || namespaceMissingCount === 0}>
               <Wand2 size={16} />
-              Translate page
+              {t("Translate page")}
             </button>
             <button type="button" onClick={translateAll} disabled={rowsCount === 0 || translating || allMissingCount === 0}>
               <Wand2 size={16} />
-              Translate all
+              {t("Translate all")}
             </button>
             <button type="button" onClick={revertNamespaceManualPatches} disabled={!activeNamespace}>
               <RotateCcw size={16} />
-              Revert namespace edits
+              {t("Revert namespace edits")}
             </button>
           </div>
         </div>
@@ -176,7 +178,7 @@ export function NamespaceWorkspace({
       <div
         className="splitHandle"
         role="separator"
-        aria-label="Resize inspector"
+        aria-label={t("Resize inspector")}
         aria-orientation="vertical"
         aria-valuemin={320}
         aria-valuemax={620}
